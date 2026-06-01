@@ -19,14 +19,13 @@ class LeakyReLULayer : public core::Layer {
 
   /**
    * @brief Apply leaky ReLU to the incoming activation tensor.
-   * @param tape Autograd tape that owns the output tensor.
    * @param input Input activation tensor.
    * @return Pointer to the tape-owned output tensor.
    * @note The returned tensor is arena-allocated and owned by the tape, not
    *     the caller.
    */
-  autograd::Tensor* forward(autograd::Tape* tape,
-                            autograd::Tensor* input) override {
+  autograd::Tensor* forward(autograd::Tensor* input) override {
+    auto* tape = autograd::Tape::get_global();
     bool req_grad = tape->record_ops_ && input->requires_grad;
     auto* out =
         tape->alloc_tensor(input->data.rows(), input->data.cols(), req_grad);

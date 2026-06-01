@@ -35,10 +35,8 @@ class PyModule : public Module {
   using Module::Module;
 
   mlengine::autograd::Tensor* forward(
-      mlengine::autograd::Tape* tape,
       mlengine::autograd::Tensor* input) override {
-    PYBIND11_OVERRIDE_PURE(mlengine::autograd::Tensor*, Module, forward, tape,
-                           input);
+    PYBIND11_OVERRIDE_PURE(mlengine::autograd::Tensor*, Module, forward, input);
   }
 };
 
@@ -184,7 +182,6 @@ Abstract building block for differentiable model components.
 Run the layer on tape-owned input storage.
 
 Args:
-  tape: Autograd tape that owns intermediate tensors.
   input: Input tensor to transform.
 
 Returns:
@@ -350,7 +347,6 @@ Args:
 Apply the affine transform and record the corresponding tape ops.
 
 Args:
-  tape: Autograd tape that owns intermediate tensors.
   input: Input activation tensor.
 
 Returns:
@@ -375,7 +371,6 @@ Elementwise rectified linear activation layer.
 Apply ReLU to the incoming activation tensor.
 
 Args:
-  tape: Autograd tape that owns the output tensor.
   input: Input activation tensor.
 
 Returns:
@@ -399,7 +394,6 @@ Args:
 Apply leaky ReLU to the incoming activation tensor.
 
 Args:
-  tape: Autograd tape that owns the output tensor.
   input: Input activation tensor.
 
 Returns:

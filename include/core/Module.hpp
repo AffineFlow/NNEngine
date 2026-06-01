@@ -55,8 +55,10 @@ class Module : public Layer {
    */
   MatrixRM predict(Eigen::Ref<const MatrixRM> X) {
     autograd::Tape tape(false);
+    autograd::Tape::set_global(&tape);
     autograd::Tensor* X_tensor = tape.push_tensor(X, false);
-    autograd::Tensor* predictions = this->forward(&tape, X_tensor);
+    autograd::Tensor* predictions = this->forward(X_tensor);
+    autograd::Tape::set_global(nullptr);
     return predictions->data;
   }
 

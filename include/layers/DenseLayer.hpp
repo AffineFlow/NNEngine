@@ -20,14 +20,12 @@ class DenseLayer : public core::Layer {
 
   /**
    * @brief Apply the affine transform and record the corresponding tape ops.
-   * @param tape Autograd tape that owns the intermediate tensors.
    * @param input Input activation tensor.
    * @return Pointer to the tape-owned output tensor.
    * @note The returned tensor is arena-allocated and owned by the tape, not
    *     the caller.
    */
-  autograd::Tensor* forward(autograd::Tape* tape,
-                            autograd::Tensor* input) override;
+  autograd::Tensor* forward(autograd::Tensor* input) override;
 
   /**
    * @brief Return the learned weight and bias tensors.

@@ -26,14 +26,16 @@ def seed_everything(seed: int) -> None:
 class BenchmarkNet(nn.Module):
     def __init__(self, input_dim, hidden_dim, output_dim):
         super().__init__()
-        self.fc1 = self.add_module(nn.DenseLayer(input_dim, hidden_dim))
-        self.relu = self.add_module(nn.ReLULayer())
-        self.fc2 = self.add_module(nn.DenseLayer(hidden_dim, output_dim))
+        # Beautiful PyTorch-style layer assignment. No more self.add_module()
+        self.fc1 = nn.DenseLayer(input_dim, hidden_dim)
+        self.relu = nn.ReLULayer()
+        self.fc2 = nn.DenseLayer(hidden_dim, output_dim)
 
-    def forward(self, tape, x):
-        x = self.fc1(tape, x)
-        x = self.relu(tape, x)
-        return self.fc2(tape, x)
+    def forward(self, x):
+        # Clean forward pass. The C++ backend fetches the global tape automatically.
+        x = self.fc1(x)
+        x = self.relu(x)
+        return self.fc2(x)
 
 
 def test_dataset(name, X, y, epochs, lr, batch_size, hidden_size, seed, use_l2=True):

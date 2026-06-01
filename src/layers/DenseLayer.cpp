@@ -24,8 +24,8 @@ DenseLayer::DenseLayer(int input_dim, int output_dim)
   }
 }
 
-autograd::Tensor* DenseLayer::forward(autograd::Tape* tape,
-                                      autograd::Tensor* input) {
+autograd::Tensor* DenseLayer::forward(autograd::Tensor* input) {
+  auto* tape = autograd::Tape::get_global();
   bool req_grad_mm =
       tape->record_ops_ && (input->requires_grad || weights_.requires_grad);
   auto* mm =

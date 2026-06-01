@@ -63,6 +63,7 @@ class JITGraph {
     if (!dataloader.has_next()) return 0.0f;
 
     tape_ = std::make_shared<autograd::Tape>(true);
+    autograd::Tape::set_global(tape_.get());
     MatrixRM X_batch, y_batch;
     dataloader.next_batch(X_batch, y_batch);
 
@@ -72,14 +73,14 @@ class JITGraph {
     parameters_ = model_->parameters();
     optimizer_->set_parameters(parameters_);
 
-    predictions_ = model_->forward(tape_.get(), X_input_);
+    predictions_ = model_->forward(X_input_);
 
     float loss = loss_fn_->forward(predictions_, y_input_);
     tape_->backward();
 
     if (regularizer_) loss += regularizer_->apply(parameters_);
     optimizer_->step();
-
+    autograd::Tape::set_global(nullptr);
     return loss;
   }
 

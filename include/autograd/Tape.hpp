@@ -24,6 +24,36 @@ class Tape {
   bool record_ops_;
 
   /**
+   * @brief Thread-local storage for the globally active tape.
+   * @return Reference to the current thread's active tape pointer.
+   */
+  static Tape*& global_tape() {
+    static thread_local Tape* current = nullptr;
+    return current;
+  }
+
+  /**
+   * @brief Set the currently active tape for this thread.
+   * @param t Pointer to the tape to activate.
+   */
+  static void set_global(Tape* t) { global_tape() = t; }
+
+  /**
+   * @brief Retrieve the currently active tape.
+   * @throws std::runtime_error if no tape is currently active.
+   * @return Pointer to the active tape.
+   */
+  static Tape* get_global() {
+    Tape* t = global_tape();
+    if (!t) {
+      throw std::runtime_error(
+          "No active tape! Ensure forward() is called within a JITGraph or "
+          "predict() context.");
+    }
+    return t;
+  }
+
+  /**
    * @brief Construct a tape that optionally records ops for replay.
    * @param record_ops Whether ops should be stored for backward replay.
    */
