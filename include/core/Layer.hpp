@@ -1,6 +1,8 @@
 #pragma once
 
 #include <Eigen/Core>
+#include <map>
+#include <string>
 #include <vector>
 
 #include "autograd/Tape.hpp"
@@ -30,6 +32,14 @@ class Layer {
    * @return Trainable tensors owned by the layer.
    */
   virtual std::vector<autograd::Tensor*> parameters() { return {}; }
+
+  /**
+   * @brief Return named trainable parameters for serialization mapping.
+   * @return Map of string names to trainable tensors.
+   */
+  virtual std::map<std::string, autograd::Tensor*> named_parameters() {
+    return {};
+  }
 };
 
 }  // namespace mlengine::core

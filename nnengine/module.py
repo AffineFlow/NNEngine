@@ -5,15 +5,6 @@ class Module(nn_core.Module):
 
     Subclasses automatically register child layers assigned to `self` 
     and implement a forward method that accepts a Tensor object.
-
-    Example:
-        >>> class MyNet(Module):
-        ...     def __init__(self):
-        ...         super().__init__()
-        ...         self.fc = nn.DenseLayer(16, 32) # Auto-registered!
-        ...
-        ...     def forward(self, x):
-        ...         return self.fc(x)
     """
 
     def __init__(self):
@@ -21,7 +12,10 @@ class Module(nn_core.Module):
         super().__init__()
 
     def __setattr__(self, name, value):
-        """Automatically register layers to the C++ backend."""
+        """Intercept assignments and register them natively in C++."""
         if isinstance(value, nn_core.Layer) or isinstance(value, nn_core.Module):
-            self.add_module(value)
+            if hasattr(self, name):
+                raise AttributeError(f"Layer '{name}' is already registered. Reassignment is not allowed.")
+            self.register_module(name, value)
+            
         super().__setattr__(name, value)

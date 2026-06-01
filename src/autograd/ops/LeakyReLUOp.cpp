@@ -11,8 +11,8 @@ void LeakyReLUOp::forward() {
       out_->grad.setZero();
     }
   }
-  out_->data.noalias() =
-      a_->data.unaryExpr([this](float x) { return x > 0.0f ? x : alpha_ * x; });
+  out_->data.array() = (a_->data.array() > 0.0f)
+                           .select(a_->data.array(), alpha_ * a_->data.array());
 }
 
 void LeakyReLUOp::backward() {

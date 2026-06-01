@@ -199,48 +199,34 @@ Composite layer with parameter collection and weight persistence helpers.
            R"pbdoc(Run the model's forward pass.)pbdoc")
       .def("__call__", &Module::forward, py::return_value_policy::reference,
            R"pbdoc(Alias for forward.)pbdoc")
-      .def("predict", &Module::predict,
+      .def("predict", &Module::predict, py::arg("X"),
            py::call_guard<py::gil_scoped_release>(), R"pbdoc(
 Run inference without recording autograd operations.
 
 Args:
-  X: Input matrix. Eigen row-major float32 storage is exposed as a NumPy ndarray.
+X: Input matrix. Eigen row-major float32 storage is exposed as a NumPy ndarray.
 
 Returns:
-  A float32 NumPy ndarray containing predictions.
+A float32 NumPy ndarray containing predictions.
 )pbdoc")
       .def(
           "parameters", &Module::parameters, py::return_value_policy::reference,
           R"pbdoc(Return mutable parameter tensors owned by child modules.)pbdoc")
+      .def(
+          "named_parameters", &Module::named_parameters,
+          py::return_value_policy::reference_internal,
+          R"pbdoc(Return a dictionary mapping layer names to their mutable parameter tensors.)pbdoc")
       .def("save_weights", &Module::save_weights, py::arg("filepath"),
            py::call_guard<py::gil_scoped_release>(), R"pbdoc(
-Serialize model parameters to a binary .nne file in native C++ code.
-
-Args:
-  filepath: Destination path for the serialized weights.
-
-Notes:
-  The serialization work executes in C++ with the GIL released.
+Serialize model parameters to a keyed binary .nne file natively.
 )pbdoc")
       .def("load_weights", &Module::load_weights, py::arg("filepath"),
            py::call_guard<py::gil_scoped_release>(), R"pbdoc(
-Load model parameters from a binary .nne file in native C++ code.
-
-Args:
-  filepath: Source path for the serialized weights.
-
-Notes:
-  The deserialization work executes in C++ with the GIL released.
+Load keyed model parameters from a binary .nne file natively.
 )pbdoc")
-      .def("add_module", &Module::add_module, py::arg("layer"),
-           py::return_value_policy::reference, R"pbdoc(
-Register a child layer and retain shared ownership.
-
-Args:
-  layer: Layer to append to the module hierarchy.
-
-Returns:
-  The same layer object for fluent model construction.
+      .def("register_module", &Module::register_module, py::arg("name"),
+           py::arg("layer"), py::return_value_policy::reference, R"pbdoc(
+Register a child layer with a specific name.
 )pbdoc");
 
   py::class_<DataLoader>(m, "DataLoader", R"pbdoc(

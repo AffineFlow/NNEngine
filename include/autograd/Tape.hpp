@@ -165,4 +165,20 @@ class Tape {
   }
 };
 
+/**
+ * @brief RAII Guard to safely manage the thread-local global tape context.
+ * Guarantees the tape is cleared even if an exception is thrown during
+ * execution.
+ */
+class TapeGuard {
+  Tape* prev_tape_;
+
+ public:
+  explicit TapeGuard(Tape* new_tape) {
+    prev_tape_ = Tape::global_tape();
+    Tape::set_global(new_tape);
+  }
+  ~TapeGuard() { Tape::set_global(prev_tape_); }
+};
+
 }  // namespace mlengine::autograd

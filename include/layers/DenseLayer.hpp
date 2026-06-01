@@ -34,6 +34,14 @@ class DenseLayer : public core::Layer {
   std::vector<autograd::Tensor*> parameters() override;
 
   /**
+   * @brief Return the learned weight and bias tensors with their local names.
+   * @return Map of local parameter names to tensors.
+   */
+  std::map<std::string, autograd::Tensor*> named_parameters() override {
+    return {{"weight", &weights_}, {"bias", &bias_}};
+  }
+
+  /**
    * @brief Access the current weight matrix.
    * @return Dense weight matrix.
    */
