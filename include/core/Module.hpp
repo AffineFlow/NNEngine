@@ -60,11 +60,26 @@ class Module : public Layer {
     return state_dict;
   }
 
+  /**
+   * @brief Recursively set the training mode for this module and all children.
+   */
+  void train(bool mode = true) override {
+    is_training_ = mode;
+    for (auto& [name, m] : named_modules_) {
+      m->train(mode);
+    }
+  }
+
   MatrixRM predict(Eigen::Ref<const MatrixRM> X) {
+    bool prev_mode = is_training_;
+    this->train(false);
+
     autograd::Tape tape(false);
     autograd::TapeGuard guard(&tape);
     autograd::Tensor* X_tensor = tape.push_tensor(X, false);
     autograd::Tensor* predictions = this->forward(X_tensor);
+
+    this->train(prev_mode);
     return predictions->data;
   }
 

@@ -40,6 +40,10 @@ class Layer {
   virtual std::map<std::string, autograd::Tensor*> named_parameters() {
     return {};
   }
+
+  bool is_training_ = true;
+  virtual void train(bool mode = true) { is_training_ = mode; }
+  void eval() { train(false); }
 };
 
 }  // namespace mlengine::core

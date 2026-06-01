@@ -26,15 +26,15 @@ def seed_everything(seed: int) -> None:
 class BenchmarkNet(nn.Module):
     def __init__(self, input_dim, hidden_dim, output_dim):
         super().__init__()
-        # Beautiful PyTorch-style layer assignment. No more self.add_module()
         self.fc1 = nn.DenseLayer(input_dim, hidden_dim)
         self.relu = nn.ReLULayer()
+        self.drop = nn.DropoutLayer(p=0.2) 
         self.fc2 = nn.DenseLayer(hidden_dim, output_dim)
 
     def forward(self, x):
-        # Clean forward pass. The C++ backend fetches the global tape automatically.
         x = self.fc1(x)
         x = self.relu(x)
+        x = self.drop(x)
         return self.fc2(x)
 
 
@@ -45,6 +45,7 @@ def test_dataset(name, X, y, epochs, lr, batch_size, hidden_size, seed, use_l2=T
     num_features = X.shape[1]
     num_classes = len(np.unique(y))
 
+    # Data Prep
     encoder = OneHotEncoder(sparse_output=False)
     y_onehot = encoder.fit_transform(y.reshape(-1, 1))
 
@@ -63,12 +64,14 @@ def test_dataset(name, X, y, epochs, lr, batch_size, hidden_size, seed, use_l2=T
     X_val_scaled = scaler.transform(X_val).astype(np.float32)
     X_test_scaled = scaler.transform(X_test).astype(np.float32)
     
+    # ---------------------------------------------------------
+    # 1. Train NNEngine Model
+    # ---------------------------------------------------------
     model = BenchmarkNet(num_features, hidden_size, num_classes)
     optimizer = nn.Adam(learning_rate=np.float32(lr))
     loss_fn = nn.SoftmaxCrossEntropyLoss()
     regularizer = nn.L2Regularizer(l2=np.float32(0.0001)) if use_l2 else None
 
-    # Loaders
     train_loader = nn.DataLoader(X_train_scaled, y_train, batch_size=batch_size, shuffle=True, drop_last=True)
     val_loader = nn.DataLoader(X_val_scaled, y_val, batch_size=batch_size, shuffle=False)
     
@@ -84,9 +87,27 @@ def test_dataset(name, X, y, epochs, lr, batch_size, hidden_size, seed, use_l2=T
 
     nn_time = t1 - t0
     nn_acc = accuracy_score(y_test_labels, nn_preds) * 100
-    print(f"🚀 NNEngine (JIT)   — Accuracy: {nn_acc:.2f}%  |  Time: {nn_time:.4f}s")
+    
+    # ---------------------------------------------------------
+    # 2. Test Native C++ Checkpointing (named_parameters)
+    # ---------------------------------------------------------
+    ckpt_path = f"checkpoint_{name.replace(' ', '_').lower()}.nne"
+    model.save_weights(ckpt_path)
+    
+    # Create a completely fresh, untrained model
+    restored_model = BenchmarkNet(num_features, hidden_size, num_classes)
+    restored_model.load_weights(ckpt_path)
+    
+    # Predict using the loaded weights
+    restored_pred_logits = restored_model.predict(X_test_scaled)
+    
+    # Verify exact match (Proves serialization and Dropout Eval state work flawlessly)
+    assert np.allclose(nn_pred_logits, restored_pred_logits, atol=1e-6), f"❌ Serialization failed for {name}!"
+    os.remove(ckpt_path) # Cleanup
 
-
+    # ---------------------------------------------------------
+    # 3. Train Scikit-Learn Model
+    # ---------------------------------------------------------
     sk_model = MLPClassifier(
         hidden_layer_sizes=(hidden_size,),
         activation="relu",
@@ -110,15 +131,20 @@ def test_dataset(name, X, y, epochs, lr, batch_size, hidden_size, seed, use_l2=T
     sk_time = t1 - t0
     sk_acc = accuracy_score(y_test_labels, sk_preds) * 100
     
+    # ---------------------------------------------------------
+    # 4. Print Results
+    # ---------------------------------------------------------
+    print(f"🚀 NNEngine (JIT)   — Accuracy: {nn_acc:.2f}%  |  Time: {nn_time:.4f}s")
     print(f"🐢 Sklearn (Adam)   — Accuracy: {sk_acc:.2f}%  |  Time: {sk_time:.4f}s")
     print(f"⚡ Speedup          — {sk_time / nn_time:.2f}x Faster")
+    print(f"💾 Checkpoint       — Verified & Passed ✓")
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Run NNEngine JIT benchmark datasets.")
     parser.add_argument("--seed", type=int, default=42, help="Random seed")
     args = parser.parse_args()
 
-    print("🔥 NNEngine Val-Loss Early Stopping Enabled. Multi-threading reverted.\n")
+    print("🔥 NNEngine Phase 2: PyTorch UX, Dropout, and Checkpointing\n")
 
     iris = load_iris()
     test_dataset("Iris Flower", iris.data, iris.target, epochs=100, lr=np.float32(0.01), batch_size=16, hidden_size=16, seed=args.seed)

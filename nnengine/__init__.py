@@ -7,7 +7,7 @@ for module composition and JIT training.
 import nn_core
 
 from nn_core import (
-    Adam, SGD, DenseLayer, ReLULayer, LeakyReLULayer,
+    Adam, SGD, DenseLayer, ReLULayer, LeakyReLULayer, DropoutLayer,
     MSELoss, SoftmaxCrossEntropyLoss, L2Regularizer,
     DataLoader, Tape, Tensor, Op, set_seed
 )
@@ -17,6 +17,7 @@ from .compiler import JITCompiler
 
 __all__ = [
     "Module", "JITCompiler", "Adam", "SGD", "DenseLayer", 
-    "ReLULayer", "LeakyReLULayer", "MSELoss", "SoftmaxCrossEntropyLoss", 
+    "ReLULayer", "LeakyReLULayer", "DropoutLayer",
+    "MSELoss", "SoftmaxCrossEntropyLoss", 
     "L2Regularizer", "DataLoader", "Tape", "Tensor", "Op", "set_seed"
 ]

@@ -118,6 +118,8 @@ class JITGraph {
    * @return Average loss over the available batches.
    */
   float evaluate(DataLoader& dataloader) {
+    model_->train(false);
+
     float total_loss = 0.0f;
     size_t batch_count = 0;
 
@@ -129,6 +131,8 @@ class JITGraph {
       total_loss += loss;
       batch_count++;
     }
+
+    model_->train(true);
     return total_loss / static_cast<float>(std::max(size_t(1), batch_count));
   }
 

@@ -18,6 +18,7 @@
 #include "core/Random.hpp"
 #include "core/Regularizer.hpp"
 #include "layers/DenseLayer.hpp"
+#include "layers/DropoutLayer.hpp"
 #include "layers/LeakyReLULayer.hpp"
 #include "layers/ReLULayer.hpp"
 #include "losses/MSELoss.hpp"
@@ -172,23 +173,14 @@ Replay the recorded backward pass.
 Clear recorded ops and rewind arena allocation.
 )pbdoc");
 
-  py::class_<Layer, std::shared_ptr<Layer>>(m, "Layer", R"pbdoc(
-Abstract building block for differentiable model components.
-)pbdoc")
-      .def("parameters", &Layer::parameters, py::return_value_policy::reference,
-           R"pbdoc(Return mutable parameter tensors owned by the layer.)pbdoc")
-      .def("forward", &Layer::forward, py::return_value_policy::reference,
-           R"pbdoc(
-Run the layer on tape-owned input storage.
-
-Args:
-  input: Input tensor to transform.
-
-Returns:
-  A Tensor owned by the tape, not the caller.
-)pbdoc")
-      .def("__call__", &Layer::forward, py::return_value_policy::reference,
-           R"pbdoc(Alias for forward.)pbdoc");
+  py::class_<Layer, std::shared_ptr<Layer>>(m, "Layer",
+                                            R"pbdoc(Abstract layer.)pbdoc")
+      .def("parameters", &Layer::parameters, py::return_value_policy::reference)
+      .def("forward", &Layer::forward, py::return_value_policy::reference)
+      .def("__call__", &Layer::forward, py::return_value_policy::reference)
+      .def("train", &Layer::train, py::arg("mode") = true,
+           R"pbdoc(Set mode.)pbdoc")
+      .def("eval", &Layer::eval, R"pbdoc(Set evaluation mode.)pbdoc");
 
   py::class_<Module, Layer, PyModule, std::shared_ptr<Module>>(m, "Module",
                                                                R"pbdoc(
@@ -386,6 +378,14 @@ Returns:
   A Tensor owned by the tape, not the caller.
 )pbdoc")
       .def("__call__", &LeakyReLULayer::forward,
+           py::return_value_policy::reference);
+
+  py::class_<mlengine::layers::DropoutLayer, Layer,
+             std::shared_ptr<mlengine::layers::DropoutLayer>>(m, "DropoutLayer")
+      .def(py::init<float>(), py::arg("p") = 0.5f)
+      .def("forward", &mlengine::layers::DropoutLayer::forward,
+           py::return_value_policy::reference)
+      .def("__call__", &mlengine::layers::DropoutLayer::forward,
            py::return_value_policy::reference);
 }
 
