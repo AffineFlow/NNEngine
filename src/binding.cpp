@@ -17,6 +17,7 @@
 #include "core/Optimizer.hpp"
 #include "core/Random.hpp"
 #include "core/Regularizer.hpp"
+#include "layers/BatchNorm1dLayer.hpp"
 #include "layers/DenseLayer.hpp"
 #include "layers/DropoutLayer.hpp"
 #include "layers/LeakyReLULayer.hpp"
@@ -309,74 +310,27 @@ Args:
 }
 
 void bind_layers(py::module_& m) {
-  py::class_<DenseLayer, Layer, std::shared_ptr<DenseLayer>>(m, "DenseLayer",
-                                                             R"pbdoc(
-Fully connected affine layer.
-)pbdoc")
-      .def(py::init<int, int>(), R"pbdoc(
-Create a dense layer.
+  py::class_<DenseLayer, Layer, std::shared_ptr<DenseLayer>>(
+      m, "DenseLayer", R"pbdoc(Fully connected affine layer.)pbdoc")
+      .def(py::init<int, int>())
+      .def("forward", &DenseLayer::forward, py::return_value_policy::reference)
+      .def("__call__", &DenseLayer::forward, py::return_value_policy::reference)
+      .def("get_weights", &DenseLayer::get_weights)
+      .def("get_bias", &DenseLayer::get_bias);
 
-Args:
-  input_dim: Number of input features.
-  output_dim: Number of output features.
-)pbdoc")
-      .def("forward", &DenseLayer::forward, py::return_value_policy::reference,
-           R"pbdoc(
-Apply the affine transform and record the corresponding tape ops.
-
-Args:
-  input: Input activation tensor.
-
-Returns:
-  A Tensor owned by the tape, not the caller.
-)pbdoc")
-      .def("__call__", &DenseLayer::forward, py::return_value_policy::reference,
-           R"pbdoc(Alias for forward.)pbdoc")
-      .def("get_weights", &DenseLayer::get_weights, R"pbdoc(
-Return the current weight matrix as a float32 NumPy ndarray.
-)pbdoc")
-      .def("get_bias", &DenseLayer::get_bias, R"pbdoc(
-Return the current bias matrix as a float32 NumPy ndarray.
-)pbdoc");
-
-  py::class_<ReLULayer, Layer, std::shared_ptr<ReLULayer>>(m, "ReLULayer",
-                                                           R"pbdoc(
-Elementwise rectified linear activation layer.
-)pbdoc")
-      .def(py::init<>(), R"pbdoc(Create a ReLU layer.)pbdoc")
-      .def("forward", &ReLULayer::forward, py::return_value_policy::reference,
-           R"pbdoc(
-Apply ReLU to the incoming activation tensor.
-
-Args:
-  input: Input activation tensor.
-
-Returns:
-  A Tensor owned by the tape, not the caller.
-)pbdoc")
-      .def("__call__", &ReLULayer::forward, py::return_value_policy::reference,
-           R"pbdoc(Alias for forward.)pbdoc");
+  py::class_<ReLULayer, Layer, std::shared_ptr<ReLULayer>>(
+      m, "ReLULayer",
+      R"pbdoc(Elementwise rectified linear activation layer.)pbdoc")
+      .def(py::init<>())
+      .def("forward", &ReLULayer::forward, py::return_value_policy::reference)
+      .def("__call__", &ReLULayer::forward, py::return_value_policy::reference);
 
   py::class_<LeakyReLULayer, Layer, std::shared_ptr<LeakyReLULayer>>(
-      m, "LeakyReLULayer", R"pbdoc(
-Elementwise leaky rectified linear activation layer.
-)pbdoc")
-      .def(py::init<float>(), py::arg("alpha") = 0.01f, R"pbdoc(
-Create a leaky ReLU layer.
-
-Args:
-  alpha: Slope applied to negative activations.
-)pbdoc")
+      m, "LeakyReLULayer",
+      R"pbdoc(Elementwise leaky rectified linear activation layer.)pbdoc")
+      .def(py::init<float>(), py::arg("alpha") = 0.01f)
       .def("forward", &LeakyReLULayer::forward,
-           py::return_value_policy::reference, R"pbdoc(
-Apply leaky ReLU to the incoming activation tensor.
-
-Args:
-  input: Input activation tensor.
-
-Returns:
-  A Tensor owned by the tape, not the caller.
-)pbdoc")
+           py::return_value_policy::reference)
       .def("__call__", &LeakyReLULayer::forward,
            py::return_value_policy::reference);
 
@@ -387,73 +341,44 @@ Returns:
            py::return_value_policy::reference)
       .def("__call__", &mlengine::layers::DropoutLayer::forward,
            py::return_value_policy::reference);
+
+  py::class_<mlengine::layers::BatchNorm1dLayer, Layer,
+             std::shared_ptr<mlengine::layers::BatchNorm1dLayer>>(
+      m, "BatchNorm1dLayer",
+      R"pbdoc(Batch Normalization layer for 2D inputs.)pbdoc")
+      .def(py::init<int, float, float>(), py::arg("num_features"),
+           py::arg("eps") = 1e-5f, py::arg("momentum") = 0.1f)
+      .def("forward", &mlengine::layers::BatchNorm1dLayer::forward,
+           py::return_value_policy::reference)
+      .def("__call__", &mlengine::layers::BatchNorm1dLayer::forward,
+           py::return_value_policy::reference);
 }
 
 void bind_model(py::module_& m) {
-  py::class_<JITGraph, std::shared_ptr<JITGraph>>(m, "JITGraph", R"pbdoc(
-JIT training loop that traces one batch and replays it efficiently.
-)pbdoc")
+  py::class_<JITGraph, std::shared_ptr<JITGraph>>(
+      m, "JITGraph",
+      R"pbdoc(JIT training loop that traces one batch and replays it efficiently.)pbdoc")
       .def(py::init<std::shared_ptr<Layer>, std::shared_ptr<Optimizer>,
                     std::shared_ptr<Loss>, std::shared_ptr<Regularizer>>(),
            py::arg("model"), py::arg("optimizer"), py::arg("loss_fn"),
-           py::arg("regularizer") = nullptr, R"pbdoc(
-Create a compiled training graph.
-
-Args:
-  model: Differentiable network to optimize.
-  optimizer: Update rule applied after each batch.
-  loss_fn: Loss function used for supervision.
-  regularizer: Optional regularization term.
-)pbdoc")
-      .def("trace_batch", &JITGraph::trace_batch, py::arg("dataloader"),
-           R"pbdoc(
-Trace one batch, record the tape, and perform the first update.
-
-Args:
-  dataloader: Batch source used for tracing.
-
-Returns:
-  Loss value for the traced batch.
-)pbdoc")
+           py::arg("regularizer") = nullptr)
+      .def("trace_batch", &JITGraph::trace_batch, py::arg("dataloader"))
       .def("fast_loop", &JITGraph::fast_loop, py::arg("dataloader"),
-           py::call_guard<py::gil_scoped_release>(), R"pbdoc(
-Replay the traced graph for the remaining batches in an epoch.
-
-Args:
-  dataloader: Batch source to consume.
-
-Returns:
-  Tuple of total loss and number of processed batches.
-)pbdoc")
+           py::call_guard<py::gil_scoped_release>())
       .def("evaluate", &JITGraph::evaluate, py::arg("dataloader"),
-           py::call_guard<py::gil_scoped_release>(), R"pbdoc(
-Evaluate the traced graph without parameter updates.
-
-Args:
-  dataloader: Batch source to consume.
-
-Returns:
-  Average loss over the available batches.
-)pbdoc")
+           py::call_guard<py::gil_scoped_release>())
       .def("fast_fit", &JITGraph::fast_fit, py::arg("dataloader"),
            py::arg("val_dataloader") = nullptr, py::arg("epochs"),
            py::arg("tol") = 1e-4f, py::arg("n_iter_no_change") = 10,
-           py::arg("verbose") = true, py::call_guard<py::gil_scoped_release>(),
-           R"pbdoc(
-Train for multiple epochs with optional validation and early stopping.
-
-Args:
-  dataloader: Training batch source.
-  val_dataloader: Optional validation batch source.
-  epochs: Number of epochs to run.
-  tol: Minimum improvement required to reset the early-stopping window.
-  n_iter_no_change: Number of epochs without improvement before stop.
-  verbose: Whether to print progress updates.
-
-Notes:
-  The traced training loop and validation pass execute natively in C++ with
-  the GIL released.
-)pbdoc");
+           py::arg("verbose") = true, py::call_guard<py::gil_scoped_release>())
+      .def(
+          "save_checkpoint", &JITGraph::save_checkpoint,
+          py::arg("base_filepath"), py::call_guard<py::gil_scoped_release>(),
+          R"pbdoc(Save model weights and optimizer state to disk natively.)pbdoc")
+      .def(
+          "load_checkpoint", &JITGraph::load_checkpoint,
+          py::arg("base_filepath"), py::call_guard<py::gil_scoped_release>(),
+          R"pbdoc(Restore model weights and optimizer state from disk natively.)pbdoc");
 }
 
 PYBIND11_MODULE(nn_core, m) {

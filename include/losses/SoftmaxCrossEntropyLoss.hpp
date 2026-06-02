@@ -10,13 +10,8 @@ namespace mlengine::core {
  */
 class SoftmaxCrossEntropyLoss : public Loss {
  public:
-  /**
-   * @brief Compute cross-entropy on logits using the log-sum-exp trick.
-   * @param logits Unnormalized class scores.
-   * @param targets One-hot encoded target probabilities.
-   * @return Mean cross-entropy loss for the batch.
-   */
-  float forward(autograd::Tensor* logits, autograd::Tensor* targets) override;
+  float compute_loss() override;
+  void backward() override;
 };
 
 }  // namespace mlengine::core

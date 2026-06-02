@@ -1,8 +1,10 @@
 #pragma once
 
+#include <fstream>
 #include <iostream>
 #include <limits>
 #include <memory>
+#include <string>
 #include <utility>
 #include <vector>
 
@@ -11,18 +13,13 @@
 #include "core/DataLoader.hpp"
 #include "core/Layer.hpp"
 #include "core/Loss.hpp"
+#include "core/Module.hpp"  // <--- ADDED: Fixes the dynamic_cast error
 #include "core/Optimizer.hpp"
 #include "core/Regularizer.hpp"
 #include "core/Types.hpp"
 
 namespace mlengine::core {
 
-/**
- * @brief JIT training loop that traces one batch and replays it efficiently.
- *
- * The graph captures a representative batch once, then reuses the recorded
- * tape and parameter pointers for fast native training loops.
- */
 class JITGraph {
  private:
   std::shared_ptr<Layer> model_;
@@ -37,13 +34,6 @@ class JITGraph {
   std::vector<autograd::Tensor*> parameters_;
 
  public:
-  /**
-   * @brief Construct a compiled training graph around a model and objective.
-   * @param model Differentiable network to optimize.
-   * @param optimizer Update rule applied after each batch.
-   * @param loss_fn Loss function used for supervision.
-   * @param regularizer Optional regularization term.
-   */
   JITGraph(std::shared_ptr<Layer> model, std::shared_ptr<Optimizer> optimizer,
            std::shared_ptr<Loss> loss_fn,
            std::shared_ptr<Regularizer> regularizer = nullptr)
@@ -52,13 +42,6 @@ class JITGraph {
         loss_fn_(loss_fn),
         regularizer_(regularizer) {}
 
-  /**
-   * @brief Trace one batch, record the tape, and perform the first update.
-   * @param dataloader Batch source used for tracing.
-   * @return Loss value for the traced batch.
-   * @note The traced graph allocates its intermediate tensors from the tape,
-   *     which owns their lifetime.
-   */
   float trace_batch(DataLoader& dataloader) {
     if (!dataloader.has_next()) return 0.0f;
 
@@ -77,6 +60,7 @@ class JITGraph {
     predictions_ = model_->forward(X_input_);
 
     float loss = loss_fn_->forward(predictions_, y_input_);
+    loss_fn_->backward();  // Seed the loss gradient
     tape_->backward();
 
     if (regularizer_) loss += regularizer_->apply(parameters_);
@@ -84,11 +68,6 @@ class JITGraph {
     return loss;
   }
 
-  /**
-   * @brief Replay the traced graph for the remaining batches in an epoch.
-   * @param dataloader Batch source to consume.
-   * @return Total loss and number of processed batches.
-   */
   std::pair<float, size_t> fast_loop(DataLoader& dataloader) {
     float total_loss = 0.0f;
     size_t batch_count = 0;
@@ -101,6 +80,7 @@ class JITGraph {
 
       tape_->replay_forward();
       float loss = loss_fn_->forward(predictions_, y_input_);
+      loss_fn_->backward();  // Seed the loss gradient
       tape_->replay_backward();
 
       if (regularizer_) loss += regularizer_->apply(parameters_);
@@ -112,11 +92,6 @@ class JITGraph {
     return {total_loss, batch_count};
   }
 
-  /**
-   * @brief Evaluate the traced graph without parameter updates.
-   * @param dataloader Batch source to consume.
-   * @return Average loss over the available batches.
-   */
   float evaluate(DataLoader& dataloader) {
     model_->train(false);
 
@@ -136,16 +111,6 @@ class JITGraph {
     return total_loss / static_cast<float>(std::max(size_t(1), batch_count));
   }
 
-  /**
-   * @brief Train for multiple epochs with optional validation and early
-   * stopping.
-   * @param dataloader Training batch source.
-   * @param val_dataloader Optional validation batch source.
-   * @param epochs Number of epochs to run.
-   * @param tol Minimum improvement required to reset the early-stopping window.
-   * @param n_iter_no_change Number of epochs without improvement before stop.
-   * @param verbose Whether to print progress updates.
-   */
   void fast_fit(DataLoader& dataloader, DataLoader* val_dataloader, int epochs,
                 float tol = 1e-4f, int n_iter_no_change = 10,
                 bool verbose = true) {
@@ -194,6 +159,24 @@ class JITGraph {
         parameters_[i]->data = best_weights[i];
       }
     }
+  }
+
+  void save_checkpoint(const std::string& base_filepath) {
+    auto* mod = dynamic_cast<core::Module*>(model_.get());
+    if (mod) {
+      mod->save_weights(base_filepath + ".weights.nne");
+    }
+    std::ofstream os(base_filepath + ".opt.nne", std::ios::binary);
+    if (os) optimizer_->save_state(os);
+  }
+
+  void load_checkpoint(const std::string& base_filepath) {
+    auto* mod = dynamic_cast<core::Module*>(model_.get());
+    if (mod) {
+      mod->load_weights(base_filepath + ".weights.nne");
+    }
+    std::ifstream is(base_filepath + ".opt.nne", std::ios::binary);
+    if (is) optimizer_->load_state(is);
   }
 };
 

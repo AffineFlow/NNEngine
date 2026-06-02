@@ -48,4 +48,45 @@ void Adam::step() {
   }
 }
 
+void Adam::save_state(std::ostream& os) const {
+  os.write(reinterpret_cast<const char*>(&t_), sizeof(int));
+  size_t num_params = parameters_.size();
+  os.write(reinterpret_cast<const char*>(&num_params), sizeof(size_t));
+
+  for (const auto& mat : m_) {
+    size_t rows = mat.rows(), cols = mat.cols();
+    os.write(reinterpret_cast<const char*>(&rows), sizeof(size_t));
+    os.write(reinterpret_cast<const char*>(&cols), sizeof(size_t));
+    os.write(reinterpret_cast<const char*>(mat.data()),
+             rows * cols * sizeof(float));
+  }
+  for (const auto& mat : v_) {
+    // Both moments share identical shapes
+    os.write(reinterpret_cast<const char*>(mat.data()),
+             mat.size() * sizeof(float));
+  }
+}
+
+void Adam::load_state(std::istream& is) {
+  is.read(reinterpret_cast<char*>(&t_), sizeof(int));
+  size_t num_params;
+  is.read(reinterpret_cast<char*>(&num_params), sizeof(size_t));
+
+  m_.resize(num_params);
+  v_.resize(num_params);
+
+  for (size_t i = 0; i < num_params; ++i) {
+    size_t rows, cols;
+    is.read(reinterpret_cast<char*>(&rows), sizeof(size_t));
+    is.read(reinterpret_cast<char*>(&cols), sizeof(size_t));
+    m_[i].resize(rows, cols);
+    is.read(reinterpret_cast<char*>(m_[i].data()), rows * cols * sizeof(float));
+  }
+  for (size_t i = 0; i < num_params; ++i) {
+    size_t rows = m_[i].rows(), cols = m_[i].cols();
+    v_[i].resize(rows, cols);
+    is.read(reinterpret_cast<char*>(v_[i].data()), rows * cols * sizeof(float));
+  }
+}
+
 }  // namespace mlengine::core

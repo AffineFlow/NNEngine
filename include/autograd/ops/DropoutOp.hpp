@@ -1,7 +1,10 @@
 #pragma once
 
+#include <random>
+
 #include "autograd/Op.hpp"
 #include "autograd/Tensor.hpp"
+#include "core/Random.hpp"
 
 namespace mlengine::autograd::ops {
 
@@ -34,16 +37,15 @@ class DropoutOp : public Op {
 
       float keep_prob = 1.0f - p_;
       float scale = 1.0f / keep_prob;
-      float threshold = 2.0f * keep_prob - 1.0f;
 
-      mask_.array() =
-          (mlengine::MatrixRM::Random(a_->data.rows(), a_->data.cols())
-               .array() < threshold)
-              .select(mlengine::MatrixRM::Constant(a_->data.rows(),
-                                                   a_->data.cols(), scale)
-                          .array(),
-                      mlengine::MatrixRM::Zero(a_->data.rows(), a_->data.cols())
-                          .array());
+      std::bernoulli_distribution d(keep_prob);
+      auto& gen = core::rng();
+
+      float* mask_ptr = mask_.data();
+      size_t size = mask_.size();
+      for (size_t i = 0; i < size; ++i) {
+        mask_ptr[i] = d(gen) ? scale : 0.0f;
+      }
 
       out_->data.noalias() = a_->data.cwiseProduct(mask_);
     }

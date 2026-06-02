@@ -10,14 +10,8 @@ namespace mlengine::core {
  */
 class MSELoss : public Loss {
  public:
-  /**
-   * @brief Compute the batch MSE and seed the prediction gradient.
-   * @param predictions Model outputs.
-   * @param targets Regression targets.
-   * @return Average squared error over the batch.
-   */
-  float forward(autograd::Tensor* predictions,
-                autograd::Tensor* targets) override;
+  float compute_loss() override;
+  void backward() override;
 };
 
 }  // namespace mlengine::core
