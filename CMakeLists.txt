@@ -85,16 +85,28 @@ endif()
 
 pybind11_add_module(nn_core NO_EXTRAS
     src/binding.cpp 
-    src/autograd/ops/MatMulOp.cpp
+    src/core/DataLoader.cpp
+    src/core/JITGraph.cpp
+    src/core/Module.cpp
+    src/autograd/Tape.cpp
     src/autograd/ops/AddBiasOp.cpp
-    src/autograd/ops/ReLUOp.cpp
+    src/autograd/ops/BatchNorm1dOp.cpp
+    src/autograd/ops/Conv2dOp.cpp
+    src/autograd/ops/DropoutOp.cpp
     src/autograd/ops/LeakyReLUOp.cpp
+    src/autograd/ops/MatMulOp.cpp
+    src/autograd/ops/ReLUOp.cpp
+    src/layers/BatchNorm1dLayer.cpp
+    src/layers/Conv2dLayer.cpp
     src/layers/DenseLayer.cpp
+    src/layers/DropoutLayer.cpp
+    src/layers/LeakyReLULayer.cpp
+    src/layers/ReLULayer.cpp
     src/losses/MSELoss.cpp
     src/losses/SoftmaxCrossEntropyLoss.cpp
-    src/regularizers/L2Regularizer.cpp
     src/optimizers/Adam.cpp
     src/optimizers/SGD.cpp
+    src/regularizers/L2Regularizer.cpp
 )
 
 if(DEV_MODE)

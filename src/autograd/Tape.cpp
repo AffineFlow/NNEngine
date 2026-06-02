@@ -1,0 +1,72 @@
+#include "autograd/Tape.hpp"
+
+#include <stdexcept>
+
+namespace mlengine::autograd {
+
+Tape*& Tape::global_tape() {
+  static thread_local Tape* current = nullptr;
+  return current;
+}
+
+void Tape::set_global(Tape* t) { global_tape() = t; }
+
+Tape* Tape::get_global() {
+  Tape* t = global_tape();
+  if (!t) throw std::runtime_error("No active tape context.");
+  return t;
+}
+
+Tape::Tape(bool record_ops) : record_ops_(record_ops) { ops_.reserve(10000); }
+
+Tensor* Tape::alloc_tensor(int rows, int cols, bool requires_grad) {
+  bool req_grad_actual = record_ops_ && requires_grad;
+  if (tensor_idx_ >= tensor_pool_.size()) {
+    tensor_pool_.emplace_back(mlengine::MatrixRM(rows, cols), req_grad_actual);
+  } else {
+    if (tensor_pool_[tensor_idx_].data.rows() != rows ||
+        tensor_pool_[tensor_idx_].data.cols() != cols) {
+      tensor_pool_[tensor_idx_].data.resize(rows, cols);
+    }
+    tensor_pool_[tensor_idx_].requires_grad = req_grad_actual;
+    if (req_grad_actual) {
+      if (tensor_pool_[tensor_idx_].grad.rows() != rows ||
+          tensor_pool_[tensor_idx_].grad.cols() != cols) {
+        tensor_pool_[tensor_idx_].grad.resize(rows, cols);
+      }
+      tensor_pool_[tensor_idx_].grad.setZero();
+    }
+  }
+  return &tensor_pool_[tensor_idx_++];
+}
+
+Tensor* Tape::push_tensor(const mlengine::MatrixRM& data, bool requires_grad) {
+  return push_expr(data, requires_grad);
+}
+
+void Tape::record_op(std::shared_ptr<Op> op) {
+  if (record_ops_) ops_.push_back(op);
+}
+void Tape::replay_forward() {
+  for (auto& op : ops_) op->forward();
+}
+void Tape::replay_backward() {
+  for (auto it = ops_.rbegin(); it != ops_.rend(); ++it) (*it)->backward();
+}
+void Tape::zero_grads() {
+  for (auto& t : tensor_pool_) t.zero_grad();
+}
+void Tape::backward() { replay_backward(); }
+void Tape::reset() {
+  ops_.clear();
+  tensor_idx_ = 0;
+}
+
+TapeGuard::TapeGuard(Tape* new_tape) {
+  prev_tape_ = Tape::global_tape();
+  Tape::set_global(new_tape);
+}
+
+TapeGuard::~TapeGuard() { Tape::set_global(prev_tape_); }
+
+}  // namespace mlengine::autograd

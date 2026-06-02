@@ -1,10 +1,8 @@
 """Python package exports for the NNEngine runtime.
 
-The package exposes the native C++ bindings together with small Python wrappers
-for module composition and JIT training.
+The package exposes the native C++ bindings together with intuitive Python wrappers
+for module composition and JIT-compiled training.
 """
-
-import nn_core
 
 from nn_core import (
     Adam, SGD, DenseLayer, ReLULayer, LeakyReLULayer, DropoutLayer, BatchNorm1dLayer,
