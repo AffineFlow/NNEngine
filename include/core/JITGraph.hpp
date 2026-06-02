@@ -13,9 +13,10 @@
 #include "core/DataLoader.hpp"
 #include "core/Layer.hpp"
 #include "core/Loss.hpp"
-#include "core/Module.hpp"  // <--- ADDED: Fixes the dynamic_cast error
+#include "core/Module.hpp"
 #include "core/Optimizer.hpp"
 #include "core/Regularizer.hpp"
+#include "core/Scheduler.hpp"  // <-- Required for Schedulers
 #include "core/Types.hpp"
 
 namespace mlengine::core {
@@ -26,6 +27,7 @@ class JITGraph {
   std::shared_ptr<Optimizer> optimizer_;
   std::shared_ptr<Loss> loss_fn_;
   std::shared_ptr<Regularizer> regularizer_;
+  std::shared_ptr<Scheduler> scheduler_ = nullptr;  // <-- Added Scheduler
 
   std::shared_ptr<autograd::Tape> tape_;
   autograd::Tensor* X_input_ = nullptr;
@@ -41,6 +43,34 @@ class JITGraph {
         optimizer_(optimizer),
         loss_fn_(loss_fn),
         regularizer_(regularizer) {}
+
+  void set_scheduler(std::shared_ptr<Scheduler> scheduler) {
+    scheduler_ = scheduler;
+  }
+
+  // The new core loop decoupled from the memory dataloader (For Python
+  // Generators)
+  float train_step(const MatrixRM& X, const MatrixRM& y) {
+    if (!X_input_) {
+      X_input_ = tape_->push_tensor(X, false);
+      y_input_ = tape_->push_tensor(y, false);
+    } else {
+      X_input_->data = X;
+      y_input_->data = y;
+    }
+
+    optimizer_->zero_grad();
+    tape_->zero_grads();
+
+    tape_->replay_forward();
+    float loss = loss_fn_->forward(predictions_, y_input_);
+    loss_fn_->backward();
+    tape_->replay_backward();
+
+    if (regularizer_) loss += regularizer_->apply(parameters_);
+    optimizer_->step();
+    return loss;
+  }
 
   float trace_batch(DataLoader& dataloader) {
     if (!dataloader.has_next()) return 0.0f;
@@ -152,6 +182,9 @@ class JITGraph {
         }
         break;
       }
+
+      // Step the scheduler at the end of the epoch
+      if (scheduler_) scheduler_->step();
     }
 
     if (!best_weights.empty()) {

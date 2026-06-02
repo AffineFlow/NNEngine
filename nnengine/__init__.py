@@ -8,7 +8,7 @@ import nn_core
 
 from nn_core import (
     Adam, SGD, DenseLayer, ReLULayer, LeakyReLULayer, DropoutLayer, BatchNorm1dLayer,
-    MSELoss, SoftmaxCrossEntropyLoss, L2Regularizer,
+    MSELoss, SoftmaxCrossEntropyLoss, L2Regularizer, Conv2dLayer, StepLR,
     DataLoader, Tape, Tensor, Op, set_seed
 )
 
@@ -18,6 +18,6 @@ from .compiler import JITCompiler
 __all__ = [
     "Module", "JITCompiler", "Adam", "SGD", "DenseLayer", 
     "ReLULayer", "LeakyReLULayer", "DropoutLayer", "BatchNorm1dLayer",
-    "MSELoss", "SoftmaxCrossEntropyLoss", 
+    "MSELoss", "SoftmaxCrossEntropyLoss", "Conv2dLayer", "StepLR",
     "L2Regularizer", "DataLoader", "Tape", "Tensor", "Op", "set_seed"
 ]

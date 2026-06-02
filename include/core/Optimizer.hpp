@@ -34,6 +34,9 @@ class Optimizer {
   // State checkpointing methods
   virtual void save_state(std::ostream& os) const {}
   virtual void load_state(std::istream& is) {}
+
+  virtual float get_lr() const { return lr_; }
+  virtual void set_lr(float lr) { lr_ = lr; }
 };
 
 }  // namespace mlengine::core

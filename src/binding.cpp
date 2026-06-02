@@ -1,4 +1,5 @@
 #include <pybind11/eigen.h>
+#include <pybind11/numpy.h>
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 
@@ -17,7 +18,9 @@
 #include "core/Optimizer.hpp"
 #include "core/Random.hpp"
 #include "core/Regularizer.hpp"
+#include "core/Scheduler.hpp"
 #include "layers/BatchNorm1dLayer.hpp"
+#include "layers/Conv2dLayer.hpp"
 #include "layers/DenseLayer.hpp"
 #include "layers/DropoutLayer.hpp"
 #include "layers/LeakyReLULayer.hpp"
@@ -43,19 +46,9 @@ class PyModule : public Module {
 };
 
 void bind_core_utils(py::module_& m) {
-  m.def("set_seed", &set_seed, py::arg("seed"), R"pbdoc(
-Seed the shared engine RNG.
+  m.def("set_seed", &set_seed, py::arg("seed"));
 
-Args:
-  seed: Seed value used for layer initialization and dataloader shuffling.
-)pbdoc");
-
-  py::class_<mlengine::autograd::Tensor>(m, "Tensor", R"pbdoc(
-Dense value-and-gradient container exposed to Python as float32 NumPy arrays.
-
-The data and grad properties are backed by Eigen row-major storage and map to
-NumPy ndarray objects with dtype float32.
-)pbdoc")
+  py::class_<mlengine::autograd::Tensor>(m, "Tensor")
       .def_property(
           "data",
           [](mlengine::autograd::Tensor& t) -> Eigen::Ref<mlengine::MatrixRM> {
@@ -63,13 +56,7 @@ NumPy ndarray objects with dtype float32.
           },
           [](mlengine::autograd::Tensor& t, const mlengine::MatrixRM& v) {
             t.data = v;
-          },
-          R"pbdoc(
-Forward value as a float32 NumPy ndarray with row-major layout.
-
-Returns:
-  A view-compatible ndarray backed by Eigen storage.
-)pbdoc")
+          })
       .def_property(
           "grad",
           [](mlengine::autograd::Tensor& t) -> Eigen::Ref<mlengine::MatrixRM> {
@@ -77,257 +64,130 @@ Returns:
           },
           [](mlengine::autograd::Tensor& t, const mlengine::MatrixRM& v) {
             t.grad = v;
-          },
-          R"pbdoc(
-Gradient buffer as a float32 NumPy ndarray with row-major layout.
-
-Returns:
-  A view-compatible ndarray backed by Eigen storage.
-)pbdoc")
+          })
       .def_property(
           "requires_grad",
           [](const mlengine::autograd::Tensor& t) { return t.requires_grad; },
           [](mlengine::autograd::Tensor& t, bool value) {
             t.requires_grad = value;
-          },
-          R"pbdoc(
-Whether the tensor participates in gradient recording.
-)pbdoc")
-      .def(
-          "__repr__",
-          [](const mlengine::autograd::Tensor& t) {
-            std::ostringstream oss;
-            oss << "Tensor(shape=(" << t.data.rows() << ", " << t.data.cols()
-                << "), requires_grad=" << (t.requires_grad ? "True" : "False")
-                << ")\n"
-                << t.data;
-            return oss.str();
-          },
-          R"pbdoc(Return a compact debugging representation.)pbdoc");
+          })
+      .def("__repr__", [](const mlengine::autograd::Tensor& t) {
+        std::ostringstream oss;
+        oss << "Tensor(shape=(" << t.data.rows() << ", " << t.data.cols()
+            << "), requires_grad=" << (t.requires_grad ? "True" : "False")
+            << ")\n"
+            << t.data;
+        return oss.str();
+      });
 
   py::class_<mlengine::autograd::Op, mlengine::autograd::ops::PyOp,
-             std::shared_ptr<mlengine::autograd::Op>>(m, "Op", R"pbdoc(
-Base class for custom differentiable primitives.
-
-Python users can subclass Op to define custom forward and backward passes.
-)pbdoc")
+             std::shared_ptr<mlengine::autograd::Op>>(m, "Op")
       .def(py::init<>())
-      .def("forward", &mlengine::autograd::Op::forward, R"pbdoc(
-Execute the forward pass for the primitive.
-)pbdoc")
-      .def("backward", &mlengine::autograd::Op::backward, R"pbdoc(
-Execute the backward pass for the primitive.
-)pbdoc");
+      .def("forward", &mlengine::autograd::Op::forward)
+      .def("backward", &mlengine::autograd::Op::backward);
 
   py::class_<mlengine::autograd::Tape,
-             std::shared_ptr<mlengine::autograd::Tape>>(m, "Tape", R"pbdoc(
-Arena allocator and replay log for autograd tensors and ops.
-
-Allocated tensors are owned by the tape and reused across replayed batches.
-)pbdoc")
-      .def(py::init<bool>(), py::arg("record_ops") = true, R"pbdoc(
-Create a tape that optionally records ops for replay.
-
-Args:
-  record_ops: Whether to store ops for backward replay.
-)pbdoc")
+             std::shared_ptr<mlengine::autograd::Tape>>(m, "Tape")
+      .def(py::init<bool>(), py::arg("record_ops") = true)
       .def_property(
           "record_ops",
           [](const mlengine::autograd::Tape& t) { return t.record_ops_; },
           [](mlengine::autograd::Tape& t, bool value) {
             t.record_ops_ = value;
-          },
-          R"pbdoc(Whether ops are recorded for replay.)pbdoc")
+          })
       .def("alloc_tensor", &mlengine::autograd::Tape::alloc_tensor,
            py::arg("rows"), py::arg("cols"), py::arg("requires_grad") = true,
-           py::return_value_policy::reference, R"pbdoc(
-Allocate a tensor from tape-owned storage.
-
-Args:
-  rows: Number of rows.
-  cols: Number of columns.
-  requires_grad: Whether the tensor participates in autograd.
-
-Returns:
-  A Tensor owned by the tape, not the caller.
-)pbdoc")
+           py::return_value_policy::reference)
       .def("push_tensor", &mlengine::autograd::Tape::push_tensor,
            py::arg("data"), py::arg("requires_grad") = true,
-           py::return_value_policy::reference, R"pbdoc(
-Copy a dense matrix into tape-owned storage.
+           py::return_value_policy::reference)
+      .def("record_op", &mlengine::autograd::Tape::record_op, py::arg("op"))
+      .def("backward", &mlengine::autograd::Tape::backward)
+      .def("reset", &mlengine::autograd::Tape::reset);
 
-Args:
-  data: Input matrix to materialize as a tensor.
-  requires_grad: Whether the resulting tensor requires gradients.
-
-Returns:
-  A Tensor owned by the tape, not the caller.
-)pbdoc")
-      .def("record_op", &mlengine::autograd::Tape::record_op, py::arg("op"),
-           R"pbdoc(
-Append a differentiable primitive to the replay log.
-)pbdoc")
-      .def("backward", &mlengine::autograd::Tape::backward, R"pbdoc(
-Replay the recorded backward pass.
-)pbdoc")
-      .def("reset", &mlengine::autograd::Tape::reset, R"pbdoc(
-Clear recorded ops and rewind arena allocation.
-)pbdoc");
-
-  py::class_<Layer, std::shared_ptr<Layer>>(m, "Layer",
-                                            R"pbdoc(Abstract layer.)pbdoc")
+  py::class_<Layer, std::shared_ptr<Layer>>(m, "Layer")
       .def("parameters", &Layer::parameters, py::return_value_policy::reference)
       .def("forward", &Layer::forward, py::return_value_policy::reference)
       .def("__call__", &Layer::forward, py::return_value_policy::reference)
-      .def("train", &Layer::train, py::arg("mode") = true,
-           R"pbdoc(Set mode.)pbdoc")
-      .def("eval", &Layer::eval, R"pbdoc(Set evaluation mode.)pbdoc");
+      .def("train", &Layer::train, py::arg("mode") = true)
+      .def("eval", &Layer::eval);
 
-  py::class_<Module, Layer, PyModule, std::shared_ptr<Module>>(m, "Module",
-                                                               R"pbdoc(
-Composite layer with parameter collection and weight persistence helpers.
-)pbdoc")
-      .def(py::init<>(), R"pbdoc(Create an empty module container.)pbdoc")
-      .def("forward", &Module::forward, py::return_value_policy::reference,
-           R"pbdoc(Run the model's forward pass.)pbdoc")
-      .def("__call__", &Module::forward, py::return_value_policy::reference,
-           R"pbdoc(Alias for forward.)pbdoc")
+  py::class_<Module, Layer, PyModule, std::shared_ptr<Module>>(m, "Module")
+      .def(py::init<>())
+      .def("forward", &Module::forward, py::return_value_policy::reference)
+      .def("__call__", &Module::forward, py::return_value_policy::reference)
       .def("predict", &Module::predict, py::arg("X"),
-           py::call_guard<py::gil_scoped_release>(), R"pbdoc(
-Run inference without recording autograd operations.
-
-Args:
-X: Input matrix. Eigen row-major float32 storage is exposed as a NumPy ndarray.
-
-Returns:
-A float32 NumPy ndarray containing predictions.
-)pbdoc")
-      .def(
-          "parameters", &Module::parameters, py::return_value_policy::reference,
-          R"pbdoc(Return mutable parameter tensors owned by child modules.)pbdoc")
-      .def(
-          "named_parameters", &Module::named_parameters,
-          py::return_value_policy::reference_internal,
-          R"pbdoc(Return a dictionary mapping layer names to their mutable parameter tensors.)pbdoc")
+           py::call_guard<py::gil_scoped_release>())
+      .def("parameters", &Module::parameters,
+           py::return_value_policy::reference)
+      .def("named_parameters", &Module::named_parameters,
+           py::return_value_policy::reference_internal)
       .def("save_weights", &Module::save_weights, py::arg("filepath"),
-           py::call_guard<py::gil_scoped_release>(), R"pbdoc(
-Serialize model parameters to a keyed binary .nne file natively.
-)pbdoc")
+           py::call_guard<py::gil_scoped_release>())
       .def("load_weights", &Module::load_weights, py::arg("filepath"),
-           py::call_guard<py::gil_scoped_release>(), R"pbdoc(
-Load keyed model parameters from a binary .nne file natively.
-)pbdoc")
+           py::call_guard<py::gil_scoped_release>())
       .def("register_module", &Module::register_module, py::arg("name"),
-           py::arg("layer"), py::return_value_policy::reference, R"pbdoc(
-Register a child layer with a specific name.
-)pbdoc");
+           py::arg("layer"), py::return_value_policy::reference);
 
-  py::class_<DataLoader>(m, "DataLoader", R"pbdoc(
-Mini-batch iterator over dense feature and target matrices.
-)pbdoc")
+  py::class_<DataLoader>(m, "DataLoader")
       .def(py::init<const mlengine::MatrixRM&, const mlengine::MatrixRM&,
                     size_t, bool, bool>(),
            py::arg("X"), py::arg("y"), py::arg("batch_size"),
-           py::arg("shuffle") = true, py::arg("drop_last") = false, R"pbdoc(
-Create a mini-batch loader from in-memory matrices.
-
-Args:
-  X: Feature matrix with samples in rows.
-  y: Target matrix with matching row count.
-  batch_size: Number of samples per batch.
-  shuffle: Whether to shuffle rows at epoch boundaries.
-  drop_last: Whether to drop the final partial batch.
-)pbdoc")
-      .def("reset", &DataLoader::reset,
-           R"pbdoc(Reset iteration and reshuffle if enabled.)pbdoc");
+           py::arg("shuffle") = true, py::arg("drop_last") = false)
+      .def("reset", &DataLoader::reset);
 }
 
 void bind_losses_and_regs(py::module_& m) {
-  py::class_<Loss, std::shared_ptr<Loss>>(m, "Loss", R"pbdoc(
-Base class for scalar objective functions.
-)pbdoc")
-      .def("forward", &Loss::forward, py::arg("predictions"),
-           py::arg("targets"),
-           R"pbdoc(
-Evaluate the loss and seed the prediction gradient.
+  py::class_<Loss, std::shared_ptr<Loss>>(m, "Loss").def(
+      "forward", &Loss::forward, py::arg("predictions"), py::arg("targets"));
 
-Args:
-  predictions: Model outputs.
-  targets: Reference targets.
+  py::class_<MSELoss, Loss, std::shared_ptr<MSELoss>>(m, "MSELoss")
+      .def(py::init<>());
 
-Returns:
-  Scalar loss value for the current batch.
-)pbdoc");
-  py::class_<MSELoss, Loss, std::shared_ptr<MSELoss>>(m, "MSELoss", R"pbdoc(
-Mean-squared-error loss for regression.
-)pbdoc")
-      .def(py::init<>(), R"pbdoc(Create an MSE loss object.)pbdoc");
   py::class_<SoftmaxCrossEntropyLoss, Loss,
              std::shared_ptr<SoftmaxCrossEntropyLoss>>(
-      m, "SoftmaxCrossEntropyLoss", R"pbdoc(
-Numerically stable softmax cross-entropy loss for classification.
-)pbdoc")
-      .def(py::init<>(),
-           R"pbdoc(Create a softmax cross-entropy loss object.)pbdoc");
-  py::class_<Regularizer, std::shared_ptr<Regularizer>>(m, "Regularizer",
-                                                        R"pbdoc(
-Base class for parameter penalties.
-)pbdoc");
-  py::class_<L2Regularizer, Regularizer, std::shared_ptr<L2Regularizer>>(
-      m, "L2Regularizer", R"pbdoc(
-L2 weight decay regularizer.
-)pbdoc")
-      .def(py::init<float>(), py::arg("l2") = 0.0001f, R"pbdoc(
-Create an L2 regularizer.
+      m, "SoftmaxCrossEntropyLoss")
+      .def(py::init<>());
 
-Args:
-  l2: Penalty coefficient.
-)pbdoc");
+  py::class_<Regularizer, std::shared_ptr<Regularizer>>(m, "Regularizer");
+
+  py::class_<L2Regularizer, Regularizer, std::shared_ptr<L2Regularizer>>(
+      m, "L2Regularizer")
+      .def(py::init<float>(), py::arg("l2") = 0.0001f);
 }
 
 void bind_optimizers(py::module_& m) {
-  py::class_<Optimizer, std::shared_ptr<Optimizer>>(m, "Optimizer", R"pbdoc(
-Base class for update rules.
-)pbdoc");
-  py::class_<SGD, Optimizer, std::shared_ptr<SGD>>(m, "SGD", R"pbdoc(
-Plain stochastic gradient descent optimizer.
-)pbdoc")
-      .def(py::init<float>(), py::arg("learning_rate") = 0.01f, R"pbdoc(
-Create an SGD optimizer.
+  py::class_<Optimizer, std::shared_ptr<Optimizer>>(m, "Optimizer");
 
-Args:
-  learning_rate: Step size used for updates.
-)pbdoc");
-  py::class_<Adam, Optimizer, std::shared_ptr<Adam>>(m, "Adam", R"pbdoc(
-Adam optimizer with bias-corrected first and second moments.
-)pbdoc")
-      .def(py::init<float>(), py::arg("learning_rate") = 0.001f, R"pbdoc(
-Create an Adam optimizer.
+  py::class_<SGD, Optimizer, std::shared_ptr<SGD>>(m, "SGD").def(
+      py::init<float>(), py::arg("learning_rate") = 0.01f);
 
-Args:
-  learning_rate: Step size used for updates.
-)pbdoc");
+  py::class_<Adam, Optimizer, std::shared_ptr<Adam>>(m, "Adam").def(
+      py::init<float>(), py::arg("learning_rate") = 0.001f);
+
+  py::class_<Scheduler, std::shared_ptr<Scheduler>>(m, "Scheduler");
+
+  py::class_<StepLR, Scheduler, std::shared_ptr<StepLR>>(m, "StepLR")
+      .def(py::init<std::shared_ptr<Optimizer>, int, float>(),
+           py::arg("optimizer"), py::arg("step_size"), py::arg("gamma") = 0.1f)
+      .def("step", &StepLR::step);
 }
 
 void bind_layers(py::module_& m) {
-  py::class_<DenseLayer, Layer, std::shared_ptr<DenseLayer>>(
-      m, "DenseLayer", R"pbdoc(Fully connected affine layer.)pbdoc")
+  py::class_<DenseLayer, Layer, std::shared_ptr<DenseLayer>>(m, "DenseLayer")
       .def(py::init<int, int>())
       .def("forward", &DenseLayer::forward, py::return_value_policy::reference)
       .def("__call__", &DenseLayer::forward, py::return_value_policy::reference)
       .def("get_weights", &DenseLayer::get_weights)
       .def("get_bias", &DenseLayer::get_bias);
 
-  py::class_<ReLULayer, Layer, std::shared_ptr<ReLULayer>>(
-      m, "ReLULayer",
-      R"pbdoc(Elementwise rectified linear activation layer.)pbdoc")
+  py::class_<ReLULayer, Layer, std::shared_ptr<ReLULayer>>(m, "ReLULayer")
       .def(py::init<>())
       .def("forward", &ReLULayer::forward, py::return_value_policy::reference)
       .def("__call__", &ReLULayer::forward, py::return_value_policy::reference);
 
   py::class_<LeakyReLULayer, Layer, std::shared_ptr<LeakyReLULayer>>(
-      m, "LeakyReLULayer",
-      R"pbdoc(Elementwise leaky rectified linear activation layer.)pbdoc")
+      m, "LeakyReLULayer")
       .def(py::init<float>(), py::arg("alpha") = 0.01f)
       .def("forward", &LeakyReLULayer::forward,
            py::return_value_policy::reference)
@@ -344,20 +204,28 @@ void bind_layers(py::module_& m) {
 
   py::class_<mlengine::layers::BatchNorm1dLayer, Layer,
              std::shared_ptr<mlengine::layers::BatchNorm1dLayer>>(
-      m, "BatchNorm1dLayer",
-      R"pbdoc(Batch Normalization layer for 2D inputs.)pbdoc")
+      m, "BatchNorm1dLayer")
       .def(py::init<int, float, float>(), py::arg("num_features"),
            py::arg("eps") = 1e-5f, py::arg("momentum") = 0.1f)
       .def("forward", &mlengine::layers::BatchNorm1dLayer::forward,
            py::return_value_policy::reference)
       .def("__call__", &mlengine::layers::BatchNorm1dLayer::forward,
            py::return_value_policy::reference);
+
+  py::class_<mlengine::layers::Conv2dLayer, Layer,
+             std::shared_ptr<mlengine::layers::Conv2dLayer>>(m, "Conv2dLayer")
+      .def(py::init<int, int, int, int, int, int, int>(),
+           py::arg("in_channels"), py::arg("out_channels"), py::arg("in_h"),
+           py::arg("in_w"), py::arg("kernel_size"), py::arg("stride") = 1,
+           py::arg("pad") = 0)
+      .def("forward", &mlengine::layers::Conv2dLayer::forward,
+           py::return_value_policy::reference)
+      .def("__call__", &mlengine::layers::Conv2dLayer::forward,
+           py::return_value_policy::reference);
 }
 
 void bind_model(py::module_& m) {
-  py::class_<JITGraph, std::shared_ptr<JITGraph>>(
-      m, "JITGraph",
-      R"pbdoc(JIT training loop that traces one batch and replays it efficiently.)pbdoc")
+  py::class_<JITGraph, std::shared_ptr<JITGraph>>(m, "JITGraph")
       .def(py::init<std::shared_ptr<Layer>, std::shared_ptr<Optimizer>,
                     std::shared_ptr<Loss>, std::shared_ptr<Regularizer>>(),
            py::arg("model"), py::arg("optimizer"), py::arg("loss_fn"),
@@ -371,14 +239,11 @@ void bind_model(py::module_& m) {
            py::arg("val_dataloader") = nullptr, py::arg("epochs"),
            py::arg("tol") = 1e-4f, py::arg("n_iter_no_change") = 10,
            py::arg("verbose") = true, py::call_guard<py::gil_scoped_release>())
-      .def(
-          "save_checkpoint", &JITGraph::save_checkpoint,
-          py::arg("base_filepath"), py::call_guard<py::gil_scoped_release>(),
-          R"pbdoc(Save model weights and optimizer state to disk natively.)pbdoc")
-      .def(
-          "load_checkpoint", &JITGraph::load_checkpoint,
-          py::arg("base_filepath"), py::call_guard<py::gil_scoped_release>(),
-          R"pbdoc(Restore model weights and optimizer state from disk natively.)pbdoc");
+      .def("save_checkpoint", &JITGraph::save_checkpoint,
+           py::arg("base_filepath"))
+      .def("load_checkpoint", &JITGraph::load_checkpoint,
+           py::arg("base_filepath"))
+      .def("set_scheduler", &JITGraph::set_scheduler, py::arg("scheduler"));
 }
 
 PYBIND11_MODULE(nn_core, m) {

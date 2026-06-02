@@ -25,4 +25,12 @@ inline void set_seed(std::uint32_t seed) {
       seed);  // Seeds C std::rand (used by Eigen::Matrix::Random for Dropout)
 }
 
+/**
+ * @brief Generate a normally distributed random float.
+ */
+inline float random_normal(float mean = 0.0f, float stddev = 1.0f) {
+  std::normal_distribution<float> dist(mean, stddev);
+  return dist(rng());
+}
+
 }  // namespace mlengine::core
