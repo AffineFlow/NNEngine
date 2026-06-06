@@ -34,10 +34,8 @@ class JITCompiler:
         if not self.is_compiled:
             self._cpp_engine.trace_batch(dataloader)
             self.is_compiled = True
-            self._cpp_engine.fast_loop(dataloader)
-            epochs -= 1
-        if epochs > 0:
-            self._cpp_engine.fast_fit(dataloader, val_dataloader, epochs, tol, n_iter_no_change, verbose)
+            dataloader.reset()
+        self._cpp_engine.fast_fit(dataloader, val_dataloader, epochs, tol, n_iter_no_change, verbose)
 
     def save_checkpoint(self, base_filepath):
         """Save the model weights and optimizer state natively to disk."""

@@ -3,7 +3,6 @@ build/
 out/
 bin/
 obj/
-*.so
 *.a
 *.la
 *.o
@@ -34,3 +33,8 @@ data/*.csv
 # --- CMake ---
 CMakeUserPresets.json
 _deps/
+
+# --- Python Native Extensions ---
+*.so
+*.pyd
+*.dylib

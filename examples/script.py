@@ -159,7 +159,7 @@ def test_dataset_vs_pytorch(name, X, y, epochs, lr, batch_size, is_cnn=False, im
         print(f"🐢 Slowdown         — {nn_time / pt_time:.2f}x Slower")
 
 if __name__ == "__main__":
-    print("⚔️  NNEngine Phase 4: Native Schedulers & CNNs vs PyTorch\n")
+    print("⚔️  NNEngine vs PyTorch\n")
     
     # Test 1: Iris (MLP)
     iris = load_iris()

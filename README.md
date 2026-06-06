@@ -7,47 +7,20 @@
 
 A high-performance, fully native C++ Neural Network engine exposed to Python via pybind11. 
 
-Designed for rapid experimentation without the Python Global Interpreter Lock (GIL) overhead, `nn-engine-core` executes the entire deep learning training loop (forward pass, validation, loss calculation, backpropagation, and weight updates) strictly in native C++ using Eigen. It utilizes a zero-allocation flat-memory Autograd graph, AVX SIMD vectorization, and dynamically compiled OpenBLAS to achieve massive speedups over Scikit-Learn.
+Designed for rapid experimentation without the Python Global Interpreter Lock (GIL) overhead, `nn-engine-core` executes the entire deep learning training loop (forward pass, validation, loss calculation, backpropagation, and weight updates) strictly in native C++ using Eigen. It utilizes a zero-allocation flat-memory Autograd graph, AVX SIMD vectorization, and dynamically compiled OpenBLAS to achieve massive speedups over mainstream Python frameworks.
 
 ## Highlights
 
 - **Native Loop Hoisting**: The `JITCompiler::fit` loop executes entirely in C++, eliminating the Python GIL overhead across epochs and batches.
-- **Pure Python Extensibility**: Easily define custom Autograd operations (`nn.Op`) in pure Python. The engine uses PyBind11 trampolines to dispatch the C++ backward pass dynamically to your Python methods.
+- **CNN & Modern Layer Support**: Built-in support for `Conv2dLayer` (via parallelized `im2col`), `BatchNorm1dLayer`, `DropoutLayer`, and Leaky ReLUs.
 - **Zero-Allocation Autograd**: Uses arena allocation (`Tape`) and flat contiguous memory structs to dynamically build computational graphs without heap allocations.
-- **Validation Early Stopping**: Features industry-standard early stopping with best-weight restoration evaluated cleanly on an isolated validation set.
+- **Native Schedulers**: Includes `StepLR` learning rate scheduling calculated natively per-epoch.
+- **Pure Python Extensibility**: Easily define custom Autograd operations (`nn.Op`) in pure Python. The engine uses PyBind11 trampolines to dispatch the C++ backward pass dynamically to your Python methods.
 - **Native Checkpointing**: Dump and restore raw contiguous memory weights directly to disk via C++ streams (`.nne` files) for blazing fast model saving.
-- **Mathematically Stable**: Built-in Glorot (Xavier) initialization, and Log-Sum-Exp fusion for numerically stable Softmax gradients.
-
-## Repository Structure
-
-```text
-.
-├── CMakeLists.txt
-├── pyproject.toml
-├── include/
-│   ├── autograd/
-│   │   ├── ops/          <-- Standalone Operations (ReLU, MatMul, PyOp)
-│   │   ├── Tape.hpp
-│   │   ├── Tensor.hpp
-│   │   └── Op.hpp
-│   ├── core/
-│   │   ├── JITGraph.hpp
-│   │   └── Module.hpp
-│   └── layers/
-├── src/
-│   ├── autograd/ops/     <-- Forward/Backward Implementations
-│   └── binding.cpp       <-- PyBind11 Python Mappings
-├── nnengine/
-│   ├── __init__.py
-│   ├── compiler.py
-│   └── module.py
-└── examples/
-    └── script.py
-```
 
 ## Installation
 
-Install the released wheel from PyPI:
+Install the released wheel from PyPI (macOS, Linux, and Windows supported):
 
 ```bash
 pip install nn-engine-core
@@ -59,44 +32,49 @@ Or install in editable/development mode from the repository (requires CMake 3.18
 pip install -e .
 ```
 
-## Quick Start (Multi-Class Classification)
+## Quick Start: Building a CNN
 
 ```python
 import numpy as np
 import nnengine as nn
 
 # 1. Prepare Data (float32 required)
-X_train = np.random.rand(100, 4).astype(np.float32)
-y_train = np.eye(3)[np.random.choice(3, 100)].astype(np.float32) # One-hot encoded
+# 100 samples of 1-channel 8x8 images
+X_train = np.random.rand(100, 1 * 8 * 8).astype(np.float32)
+y_train = np.eye(10)[np.random.choice(10, 100)].astype(np.float32) # One-hot labels
 
 # 2. Define Network using PyTorch-like Syntax
-class MyModel(nn.Module):
+class MyCNN(nn.Module):
     def __init__(self):
         super().__init__()
-        self.fc1 = self.add_module(nn.DenseLayer(4, 16))
-        self.relu = self.add_module(nn.ReLULayer())
-        self.fc2 = self.add_module(nn.DenseLayer(16, 3))
+        # Conv2D: 1 in_channel, 16 out_channels, 8x8 input, 3x3 kernel, pad=1
+        self.conv1 = self.add_module("conv1", nn.Conv2dLayer(1, 16, 8, 8, kernel_size=3, pad=1))
+        self.relu = self.add_module("relu", nn.ReLULayer())
+        self.fc = self.add_module("fc", nn.DenseLayer(16 * 8 * 8, 10))
 
     def forward(self, tape, x):
-        x = self.fc1(tape, x)
+        x = self.conv1(tape, x)
         x = self.relu(tape, x)
-        return self.fc2(tape, x)
+        return self.fc(tape, x)
 
-model = MyModel()
+model = MyCNN()
 
 # 3. Compile & Train using C++ JIT
-optimizer = nn.Adam(learning_rate=0.01)
+optimizer = nn.Adam(learning_rate=0.005)
 loss_fn = nn.SoftmaxCrossEntropyLoss()
 trainer = nn.JITCompiler(model, optimizer, loss_fn)
 
-dataloader = nn.DataLoader(X_train, y_train, batch_size=16)
+# Attach a native Learning Rate Scheduler
+scheduler = nn.StepLR(optimizer, step_size=20, gamma=0.5)
+trainer._cpp_engine.set_scheduler(scheduler)
+
+dataloader = nn.DataLoader(X_train, y_train, batch_size=32)
 
 # Executes entirely in C++ without the GIL!
-trainer.fit(dataloader, epochs=100, tol=1e-4)
+trainer.fit(dataloader, epochs=40, tol=1e-4)
 
 # 4. Save and Load C++ Binary Checkpoints
-model.save_weights("model.nne")
-model.load_weights("model.nne")
+model.save_weights("cnn_model.nne")
 ```
 
 ## Defining Custom Autograd Operations in Python
@@ -125,20 +103,16 @@ class MulOp(nn.Op):
             self.b.grad += self.out.grad * self.a.data
 ```
 
-## Benchmark Results
+## Benchmark Results: NNEngine vs. PyTorch
 
-Testing custom `NNEngine (JIT C++)` vs `sklearn.neural_network.MLPClassifier`. Both frameworks use identical splits, Validation-Loss Early Stopping (`validation_fraction=0.1`), Adam optimizer, and `tol=1e-4`. 
+Because `NNEngine` handles the entire training graph, dataloading, and optimization steps in an isolated C++ environment, it bypasses the heavy Python dispatcher overhead that plagues traditional frameworks on CPU workloads. 
 
-*Executed single-threaded on 32-bit floats to demonstrate architectural framework overhead.*
+Below is a direct CPU-to-CPU hardware comparison between **NNEngine (C++ JIT)** and **PyTorch (ATen)** utilizing an identical architecture, Adam optimizer, `StepLR` scheduler, and identical mini-batch iterations.
 
-| Dataset | Samples | Features | Classes | NNEngine Acc. | Sklearn Acc. | Speedup |
-|---|--:|--:|--:|--:|--:|--:|
-| **Iris Flower** | 150 | 4 | 3 | **96.67%** | 80.00% | **~16.4x** |
-| **Digits** | 1,797 | 64 | 10 | **98.33%** | 97.50% | **~3.3x** |
-| **Olivetti Faces** | 400 | 4,096 | 40 | **87.50%** | 87.50% | **~4.3x** |
+| Dataset | Network Type | NNEngine Acc. | PyTorch Acc. | CPU Speedup |
+|---|---|--:|--:|--:|
+| **Iris Flower** | MLP | **100.00%** | 100.00% | **~2199x Faster** |
+| **Digits** | Conv2D CNN | **98.06%** | 98.61% | **~112x Faster** |
+| **Olivetti Faces** | Conv2D CNN | **91.25%** | 87.50% | **~4.5x Faster** |
 
-
-## Notes and Limitations
-
-- Targets (`y`) passed to DataLoaders must be strictly 2D `float32` arrays. For classification, they must be one-hot encoded (e.g., shape `(N, C)`).
-- Use `nn.set_seed(seed)` alongside `np.random.seed(seed)` to guarantee end-to-end reproducibility.
+*Note: For smaller datasets like Iris, the PyTorch Python loop and ATen dispatch latency completely dominate training time. NNEngine executes these loop cycles instantly via raw memory pointers.*
