@@ -1,6 +1,8 @@
 #include "autograd/ops/Conv2dOp.hpp"
 
+#ifdef _OPENMP
 #include <omp.h>
+#endif
 
 namespace mlengine::autograd::ops {
 
