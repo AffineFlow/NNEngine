@@ -46,6 +46,7 @@ jobs:
             CMAKE_CXX_COMPILER_LAUNCHER=ccache
             CCACHE_DIR=${{ github.workspace }}/.ccache
             CCACHE_COMPILERCHECK=content
+            MACOSX_DEPLOYMENT_TARGET="15.0"
 
       - name: Fix cache permissions for Docker
         if: runner.os == 'Linux'
