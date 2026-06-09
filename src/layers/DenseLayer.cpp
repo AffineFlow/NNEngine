@@ -4,6 +4,7 @@
 #include <memory>
 #include <random>
 
+#include "autograd/Tape.hpp"
 #include "autograd/ops/AddBiasOp.hpp"
 #include "autograd/ops/MatMulOp.hpp"
 #include "core/Random.hpp"

@@ -7,7 +7,7 @@ L2Regularizer::L2Regularizer(float l2) : l2_(l2) {}
 float L2Regularizer::apply(const std::vector<autograd::Tensor*>& parameters) {
   float penalty = 0.0f;
   for (auto* p : parameters) {
-    if (!p->requires_grad) continue;
+    if (!p->requires_grad || !p->apply_regularization) continue;
 
     float* p_ptr = p->data.data();
     float* g_ptr = p->grad.data();

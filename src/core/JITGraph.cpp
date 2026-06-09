@@ -85,7 +85,6 @@ float JITGraph::evaluate(DataLoader& dataloader) {
     dataloader.next_batch(X_input_->data, y_input_->data);
     tape_->replay_forward();
     float loss = loss_fn_->forward(predictions_, y_input_);
-    if (regularizer_) loss += regularizer_->apply(parameters_);
     total_loss += loss;
     batch_count++;
   }

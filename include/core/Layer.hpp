@@ -5,7 +5,7 @@
 #include <string>
 #include <vector>
 
-#include "autograd/Tape.hpp"
+#include "autograd/Tensor.hpp"
 #include "core/Types.hpp"
 
 namespace mlengine::core {
