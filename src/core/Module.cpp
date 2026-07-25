@@ -40,7 +40,7 @@ void Module::train(bool mode) {
   }
 }
 
-MatrixRM Module::predict(Eigen::Ref<const MatrixRM> X) {
+autograd::Tensor Module::predict(const autograd::Tensor& X) {
   bool prev_mode = is_training_;
   this->train(false);
   autograd::Tape tape(false);
@@ -49,9 +49,10 @@ MatrixRM Module::predict(Eigen::Ref<const MatrixRM> X) {
   autograd::Tensor* predictions = this->forward(X_tensor);
   this->train(prev_mode);
 
-  Eigen::Map<MatrixRM> out_map(predictions->data.data(), predictions->shape[0],
-                               predictions->shape[1]);
-  return out_map;
+  autograd::Tensor out(predictions->shape, false);
+  std::copy_n(predictions->data.data(), predictions->data.size(),
+              out.data.data());
+  return out;
 }
 
 void Module::save_weights(const std::string& filepath) {

@@ -81,11 +81,10 @@ void Conv2dOp::forward() {
   mlengine::Shape out_shape = {batch, out_channels_ * col_cols};
   if (!out_->has_shape(out_shape)) out_->resize(out_shape);
 
-  // Thread-safe zero-allocation logic: only resize pool if batch size grows
   if (batch > max_batch_) {
     cols_.resize(batch);
     for (int b = 0; b < batch; ++b) {
-      cols_[b].resize(col_rows, col_cols);
+      cols_[b].resize(col_rows * col_cols);
     }
     max_batch_ = batch;
   }
@@ -103,10 +102,15 @@ void Conv2dOp::forward() {
            in_h_, in_w_, kernel_size_, kernel_size_, pad_, pad_, stride_,
            stride_, cols_[b].data());
 
-    Eigen::Map<mlengine::MatrixRM> out_map(
-        out_->data.data() + (b * out_channels_ * col_cols), out_channels_,
-        col_cols);
-    out_map.noalias() = W_mat * cols_[b];
+    Eigen::Map<
+        Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>>
+        col_map(cols_[b].data(), col_rows, col_cols);
+    Eigen::Map<
+        Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>>
+        out_map(out_->data.data() + (b * out_channels_ * col_cols),
+                out_channels_, col_cols);
+
+    out_map.noalias() = W_mat * col_map;
     out_map.colwise() += B_mat.row(0).transpose();
   }
 }
@@ -122,21 +126,16 @@ void Conv2dOp::backward() {
       Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>>
       W_mat(w_->data.data(), out_channels_, col_rows);
 
-  // Pre-allocate or reset thread-local gradient and temporary buffers
   for (int t = 0; t < num_threads_; ++t) {
-    if (thread_dW_[t].rows() != out_channels_ ||
-        thread_dW_[t].cols() != col_rows) {
-      thread_dW_[t].resize(out_channels_, col_rows);
+    if (thread_dW_[t].size() != out_channels_ * col_rows) {
+      thread_dW_[t].resize(out_channels_ * col_rows);
     }
-    if (thread_db_[t].rows() != 1 || thread_db_[t].cols() != out_channels_) {
-      thread_db_[t].resize(1, out_channels_);
+    if (thread_db_[t].size() != out_channels_) {
+      thread_db_[t].resize(out_channels_);
     }
-    if (x_->requires_grad && (thread_dcol_[t].rows() != col_rows ||
-                              thread_dcol_[t].cols() != col_cols)) {
-      thread_dcol_[t].resize(col_rows, col_cols);
+    if (x_->requires_grad && thread_dcol_[t].size() != col_rows * col_cols) {
+      thread_dcol_[t].resize(col_rows * col_cols);
     }
-
-    // Set to zero securely prior to concurrent accumulation
     thread_dW_[t].setZero();
     thread_db_[t].setZero();
   }
@@ -150,41 +149,63 @@ void Conv2dOp::backward() {
 
 #pragma omp for
     for (int b = 0; b < batch; ++b) {
-      Eigen::Map<mlengine::MatrixRM> dout_map(
-          out_->grad.data() + (b * out_channels_ * col_cols), out_channels_,
-          col_cols);
+      Eigen::Map<
+          Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>>
+          dout_map(out_->grad.data() + (b * out_channels_ * col_cols),
+                   out_channels_, col_cols);
 
-      thread_db_[tid] += dout_map.rowwise().sum().transpose();
-      thread_dW_[tid].noalias() += dout_map * cols_[b].transpose();
+      Eigen::Map<
+          Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>>
+          col_map(cols_[b].data(), col_rows, col_cols);
+
+      Eigen::Map<
+          Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>>
+          t_db(thread_db_[tid].data(), 1, out_channels_);
+      Eigen::Map<
+          Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>>
+          t_dw(thread_dW_[tid].data(), out_channels_, col_rows);
+
+      t_db += dout_map.rowwise().sum().transpose();
+      t_dw.noalias() += dout_map * col_map.transpose();
 
       if (x_->requires_grad) {
-        // No-allocation matrix multiplication using pre-established thread pool
-        // buffer
-        thread_dcol_[tid].noalias() = W_mat.transpose() * dout_map;
+        Eigen::Map<Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic,
+                                 Eigen::RowMajor>>
+            t_dcol(thread_dcol_[tid].data(), col_rows, col_cols);
+
+        t_dcol.noalias() = W_mat.transpose() * dout_map;
 
         float* dx_batch_ptr =
             x_->grad.data() + (b * in_channels_ * in_h_ * in_w_);
         std::fill(dx_batch_ptr, dx_batch_ptr + (in_channels_ * in_h_ * in_w_),
                   0.0f);
-        col2im(thread_dcol_[tid].data(), in_channels_, in_h_, in_w_,
-               kernel_size_, kernel_size_, pad_, pad_, stride_, stride_,
-               dx_batch_ptr);
+        col2im(t_dcol.data(), in_channels_, in_h_, in_w_, kernel_size_,
+               kernel_size_, pad_, pad_, stride_, stride_, dx_batch_ptr);
       }
     }
   }
 
-  // Sequential reduction (maintains 100% determinism)
   if (w_->requires_grad) {
     Eigen::Map<
         Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>>
         dW_target(w_->grad.data(), out_channels_, col_rows);
-    for (int t = 0; t < num_threads_; ++t) dW_target += thread_dW_[t];
+    for (int t = 0; t < num_threads_; ++t) {
+      Eigen::Map<
+          Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>>
+          t_dw(thread_dW_[t].data(), out_channels_, col_rows);
+      dW_target += t_dw;
+    }
   }
   if (bias_->requires_grad) {
     Eigen::Map<
         Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>>
         db_target(bias_->grad.data(), 1, out_channels_);
-    for (int t = 0; t < num_threads_; ++t) db_target += thread_db_[t];
+    for (int t = 0; t < num_threads_; ++t) {
+      Eigen::Map<
+          Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>>
+          t_db(thread_db_[t].data(), 1, out_channels_);
+      db_target += t_db;
+    }
   }
 }
 }  // namespace mlengine::autograd::ops

@@ -10,8 +10,6 @@
 
 namespace mlengine::core {
 
-using MatrixRM = mlengine::MatrixRM;
-
 /**
  * @brief Abstract building block for differentiable model components.
  */

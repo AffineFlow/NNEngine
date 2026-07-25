@@ -8,10 +8,6 @@ namespace mlengine {
 
 using Scalar = float;
 
-// Legacy 2D matrix used for Python/DataLoader interoperability boundaries
-using MatrixRM =
-    Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>;
-
 // Flat 1D storage for N-dimensional tensor data
 using FlatStorage = Eigen::Tensor<Scalar, 1, Eigen::RowMajor>;
 

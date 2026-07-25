@@ -24,6 +24,10 @@ void BatchNorm1dOp::forward() {
   int batch = x_->shape[0];
   int feat = x_->shape[1];
 
+  if (x_centered_.size() != batch * feat) x_centered_.resize(batch * feat);
+  if (stddev_inv_.size() != feat) stddev_inv_.resize(feat);
+  if (x_hat_.size() != batch * feat) x_hat_.resize(batch * feat);
+
   ArrayMap x_arr(x_->data.data(), batch, feat);
   ArrayMap gamma_arr(gamma_->data.data(), 1, feat);
   ArrayMap beta_arr(beta_->data.data(), 1, feat);
@@ -33,20 +37,22 @@ void BatchNorm1dOp::forward() {
 
   if (*is_training_) {
     Eigen::ArrayXf batch_mean = x_arr.colwise().mean();
-    x_centered_ = (x_arr.rowwise() - batch_mean.transpose()).matrix();
 
-    Eigen::ArrayXf batch_var = x_centered_.array().square().colwise().mean();
-    stddev_inv_ = (batch_var + eps_).inverse().sqrt().matrix().transpose();
+    ArrayMap xc_arr(x_centered_.data(), batch, feat);
+    xc_arr = x_arr.rowwise() - batch_mean.transpose();
 
-    x_hat_ =
-        (x_centered_.array().rowwise() * stddev_inv_.row(0).array()).matrix();
+    Eigen::ArrayXf batch_var = xc_arr.square().colwise().mean();
+    Eigen::Map<Eigen::ArrayXf> std_inv(stddev_inv_.data(), feat);
+    std_inv = (batch_var + eps_).inverse().sqrt();
+
+    ArrayMap xh_arr(x_hat_.data(), batch, feat);
+    xh_arr = xc_arr.rowwise() * std_inv.transpose();
 
     r_mean = (1.0f - momentum_) * r_mean + momentum_ * batch_mean;
     float unbias = batch > 1 ? static_cast<float>(batch) / (batch - 1) : 1.0f;
     r_var = (1.0f - momentum_) * r_var + momentum_ * batch_var * unbias;
 
-    out_arr = (x_hat_.array().rowwise() * gamma_arr.row(0)).rowwise() +
-              beta_arr.row(0);
+    out_arr = (xh_arr.rowwise() * gamma_arr.row(0)).rowwise() + beta_arr.row(0);
   } else {
     Eigen::ArrayXf std_inv = (r_var + eps_).inverse().sqrt();
     Eigen::ArrayXXf x_hat_eval =
@@ -67,8 +73,10 @@ void BatchNorm1dOp::backward() {
   ArrayMap dout_arr(out_->grad.data(), batch, feat);
   ArrayMap gamma_arr(gamma_->data.data(), 1, feat);
 
+  ArrayMap xh_arr(x_hat_.data(), batch, feat);
+
   if (gamma_->requires_grad) {
-    dgamma_arr.row(0) += (dout_arr * x_hat_.array()).colwise().sum();
+    dgamma_arr.row(0) += (dout_arr * xh_arr).colwise().sum();
   }
   if (beta_->requires_grad) {
     dbeta_arr.row(0) += dout_arr.colwise().sum();
@@ -76,13 +84,14 @@ void BatchNorm1dOp::backward() {
   if (x_->requires_grad) {
     Eigen::ArrayXXf dx_hat = dout_arr.rowwise() * gamma_arr.row(0);
     Eigen::ArrayXf dx_hat_sum = dx_hat.colwise().sum();
-    Eigen::ArrayXf dx_hat_x_hat_sum = (dx_hat * x_hat_.array()).colwise().sum();
+    Eigen::ArrayXf dx_hat_x_hat_sum = (dx_hat * xh_arr).colwise().sum();
 
     Eigen::ArrayXXf term =
         (dx_hat * static_cast<float>(batch)).rowwise() - dx_hat_sum.transpose();
-    term -= x_hat_.array().rowwise() * dx_hat_x_hat_sum.transpose();
+    term -= xh_arr.rowwise() * dx_hat_x_hat_sum.transpose();
 
-    dx_arr += term.rowwise() * (stddev_inv_.row(0).array() * (1.0f / batch));
+    Eigen::Map<Eigen::ArrayXf> std_inv(stddev_inv_.data(), feat);
+    dx_arr += term.rowwise() * (std_inv.transpose() * (1.0f / batch));
   }
 }
 }  // namespace mlengine::autograd::ops

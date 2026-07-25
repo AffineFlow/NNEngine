@@ -21,13 +21,16 @@ void JITGraph::set_scheduler(std::shared_ptr<Scheduler> scheduler) {
   scheduler_ = scheduler;
 }
 
-float JITGraph::train_step(const MatrixRM& X, const MatrixRM& y) {
+float JITGraph::train_step(const autograd::Tensor& X,
+                           const autograd::Tensor& y) {
   if (!X_input_) {
     X_input_ = tape_->push_tensor(X, false);
     y_input_ = tape_->push_tensor(y, false);
   } else {
-    std::copy(X.data(), X.data() + X.size(), X_input_->data.data());
-    std::copy(y.data(), y.data() + y.size(), y_input_->data.data());
+    std::copy(X.data.data(), X.data.data() + X.data.size(),
+              X_input_->data.data());
+    std::copy(y.data.data(), y.data.data() + y.data.size(),
+              y_input_->data.data());
   }
   optimizer_->zero_grad();
   tape_->zero_grads();
@@ -41,11 +44,17 @@ float JITGraph::train_step(const MatrixRM& X, const MatrixRM& y) {
 }
 
 float JITGraph::trace_batch(DataLoader& dataloader) {
-  if (!dataloader.has_next()) return 0.0f;
+  if (!dataloader.has_next()) {
+    throw std::runtime_error(
+        "DataLoader exhausted before JIT trace. Reset it first.");
+  }
   tape_ = std::make_shared<autograd::Tape>(true);
   autograd::TapeGuard guard(tape_.get());
-  MatrixRM X_batch, y_batch;
+
+  autograd::Tensor X_batch(mlengine::Shape{0});
+  autograd::Tensor y_batch(mlengine::Shape{0});
   dataloader.next_batch(X_batch, y_batch);
+
   X_input_ = tape_->push_tensor(X_batch, false);
   y_input_ = tape_->push_tensor(y_batch, false);
   parameters_ = model_->parameters();
@@ -62,12 +71,14 @@ float JITGraph::trace_batch(DataLoader& dataloader) {
 std::pair<float, size_t> JITGraph::fast_loop(DataLoader& dataloader) {
   float total_loss = 0.0f;
   size_t batch_count = 0;
-  MatrixRM X_batch, y_batch;
+  autograd::Tensor X_batch(mlengine::Shape{0});
+  autograd::Tensor y_batch(mlengine::Shape{0});
+
   while (dataloader.has_next()) {
     dataloader.next_batch(X_batch, y_batch);
-    std::copy(X_batch.data(), X_batch.data() + X_batch.size(),
+    std::copy(X_batch.data.data(), X_batch.data.data() + X_batch.data.size(),
               X_input_->data.data());
-    std::copy(y_batch.data(), y_batch.data() + y_batch.size(),
+    std::copy(y_batch.data.data(), y_batch.data.data() + y_batch.data.size(),
               y_input_->data.data());
 
     optimizer_->zero_grad();
@@ -88,12 +99,14 @@ float JITGraph::evaluate(DataLoader& dataloader) {
   model_->train(false);
   float total_loss = 0.0f;
   size_t batch_count = 0;
-  MatrixRM X_batch, y_batch;
+  autograd::Tensor X_batch(mlengine::Shape{0});
+  autograd::Tensor y_batch(mlengine::Shape{0});
+
   while (dataloader.has_next()) {
     dataloader.next_batch(X_batch, y_batch);
-    std::copy(X_batch.data(), X_batch.data() + X_batch.size(),
+    std::copy(X_batch.data.data(), X_batch.data.data() + X_batch.data.size(),
               X_input_->data.data());
-    std::copy(y_batch.data(), y_batch.data() + y_batch.size(),
+    std::copy(y_batch.data.data(), y_batch.data.data() + y_batch.data.size(),
               y_input_->data.data());
 
     tape_->replay_forward();

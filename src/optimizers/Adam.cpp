@@ -12,9 +12,10 @@ void Adam::set_parameters(const std::vector<autograd::Tensor*>& params) {
   v_.clear();
   t_ = 0;
   for (auto* p : parameters_) {
-    // Keep internal states as MatrixRM, they just act as flat buffers
-    m_.push_back(mlengine::MatrixRM::Zero(1, p->data.size()));
-    v_.push_back(mlengine::MatrixRM::Zero(1, p->data.size()));
+    m_.push_back(mlengine::FlatStorage(p->data.size()));
+    m_.back().setZero();
+    v_.push_back(mlengine::FlatStorage(p->data.size()));
+    v_.back().setZero();
   }
 }
 
@@ -72,12 +73,12 @@ void Adam::load_state(std::istream& is) {
   for (size_t i = 0; i < num_params; ++i) {
     size_t size;
     is.read(reinterpret_cast<char*>(&size), sizeof(size_t));
-    m_[i].resize(1, size);
+    m_[i].resize(size);
     is.read(reinterpret_cast<char*>(m_[i].data()), size * sizeof(float));
   }
   for (size_t i = 0; i < num_params; ++i) {
     size_t size = m_[i].size();
-    v_[i].resize(1, size);
+    v_[i].resize(size);
     is.read(reinterpret_cast<char*>(v_[i].data()), size * sizeof(float));
   }
 }

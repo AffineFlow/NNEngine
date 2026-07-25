@@ -9,12 +9,9 @@
 
 namespace mlengine::core {
 
-/**
- * @brief Adam optimizer with first/second moment estimates.
- */
 class Adam : public Optimizer {
-  std::vector<mlengine::MatrixRM> m_;
-  std::vector<mlengine::MatrixRM> v_;
+  std::vector<mlengine::FlatStorage> m_;
+  std::vector<mlengine::FlatStorage> v_;
   int t_ = 0;
   float beta1_ = 0.9f;
   float beta2_ = 0.999f;
@@ -25,7 +22,6 @@ class Adam : public Optimizer {
   void set_parameters(const std::vector<autograd::Tensor*>& params) override;
   void step() override;
 
-  // Checkpointing implementation inside the class scope
   void save_state(std::ostream& os) const override;
   void load_state(std::istream& is) override;
 };

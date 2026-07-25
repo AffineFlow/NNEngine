@@ -32,9 +32,11 @@ class JITCompiler:
             verbose (bool): Whether to print progress from the native engine.
         """
         if not self.is_compiled:
+            dataloader.reset()
             self._cpp_engine.trace_batch(dataloader)
             self.is_compiled = True
-            dataloader.reset()
+            
+        dataloader.reset()
         self._cpp_engine.fast_fit(dataloader, val_dataloader, epochs, tol, n_iter_no_change, verbose)
 
     def save_checkpoint(self, base_filepath):

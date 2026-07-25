@@ -13,8 +13,10 @@ void AdamW::set_parameters(const std::vector<autograd::Tensor*>& params) {
   v_.clear();
   t_ = 0;
   for (auto* p : parameters_) {
-    m_.push_back(mlengine::MatrixRM::Zero(1, p->data.size()));
-    v_.push_back(mlengine::MatrixRM::Zero(1, p->data.size()));
+    m_.push_back(mlengine::FlatStorage(p->data.size()));
+    m_.back().setZero();
+    v_.push_back(mlengine::FlatStorage(p->data.size()));
+    v_.back().setZero();
   }
 }
 
@@ -39,8 +41,6 @@ void AdamW::step() {
       m_ptr[j] = beta1_ * m_ptr[j] + (1.0f - beta1_) * g_ptr[j];
       v_ptr[j] = beta2_ * v_ptr[j] + (1.0f - beta2_) * (g_ptr[j] * g_ptr[j]);
 
-      // Decoupled weight decay: applied directly to the parameter (if enabled
-      // for this tensor)
       float wd_term = p->apply_regularization
                           ? (current_lr * weight_decay_ * p_ptr[j])
                           : 0.0f;
@@ -76,12 +76,12 @@ void AdamW::load_state(std::istream& is) {
   for (size_t i = 0; i < num_params; ++i) {
     size_t size;
     is.read(reinterpret_cast<char*>(&size), sizeof(size_t));
-    m_[i].resize(1, size);
+    m_[i].resize(size);
     is.read(reinterpret_cast<char*>(m_[i].data()), size * sizeof(float));
   }
   for (size_t i = 0; i < num_params; ++i) {
     size_t size = m_[i].size();
-    v_[i].resize(1, size);
+    v_[i].resize(size);
     is.read(reinterpret_cast<char*>(v_[i].data()), size * sizeof(float));
   }
 }

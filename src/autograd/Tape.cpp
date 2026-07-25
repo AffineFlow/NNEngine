@@ -35,12 +35,10 @@ Tensor* Tape::alloc_tensor(const mlengine::Shape& shape, bool requires_grad) {
   return &tensor_pool_[tensor_idx_++];
 }
 
-Tensor* Tape::push_tensor(const mlengine::MatrixRM& input_data,
-                          bool requires_grad) {
-  mlengine::Shape shape = {input_data.rows(), input_data.cols()};
-  Tensor* t = alloc_tensor(shape, requires_grad);
-  std::copy(input_data.data(), input_data.data() + input_data.size(),
-            t->data.data());
+Tensor* Tape::push_tensor(const Tensor& input_data, bool requires_grad) {
+  Tensor* t = alloc_tensor(input_data.shape, requires_grad);
+  std::copy(input_data.data.data(),
+            input_data.data.data() + input_data.data.size(), t->data.data());
   return t;
 }
 

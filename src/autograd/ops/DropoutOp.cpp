@@ -14,14 +14,13 @@ void DropoutOp::forward() {
   if (!(*is_training_)) {
     out_->data = a_->data;
   } else {
-    if (mask_.rows() != 1 || mask_.cols() != a_->data.size()) {
-      mask_.resize(1, a_->data.size());
+    if (mask_.size() != a_->data.size()) {
+      mask_.resize(a_->data.size());
     }
 
     float keep_prob = 1.0f - p_;
     float scale = 1.0f / keep_prob;
 
-    // Vectorized mask generation using Eigen's RNG
     float threshold = -1.0f + 2.0f * keep_prob;
     Eigen::Map<Eigen::ArrayXf> mask_arr(mask_.data(), a_->data.size());
     mask_arr =

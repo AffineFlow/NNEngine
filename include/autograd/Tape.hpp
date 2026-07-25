@@ -23,9 +23,8 @@ class Tape {
 
   Tensor* alloc_tensor(const mlengine::Shape& shape, bool requires_grad = true);
 
-  // Bridge for MatrixRM inputs
-  Tensor* push_tensor(const mlengine::MatrixRM& data,
-                      bool requires_grad = true);
+  // Native Tensor push
+  Tensor* push_tensor(const Tensor& data, bool requires_grad = true);
 
   void record_op(std::shared_ptr<Op> op);
   void replay_forward();

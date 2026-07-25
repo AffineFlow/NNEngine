@@ -9,12 +9,9 @@
 
 namespace mlengine::core {
 
-/**
- * @brief AdamW optimizer with decoupled weight decay.
- */
 class AdamW : public Optimizer {
-  std::vector<mlengine::MatrixRM> m_;
-  std::vector<mlengine::MatrixRM> v_;
+  std::vector<mlengine::FlatStorage> m_;
+  std::vector<mlengine::FlatStorage> v_;
   int t_ = 0;
   float beta1_ = 0.9f;
   float beta2_ = 0.999f;

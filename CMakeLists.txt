@@ -88,7 +88,11 @@ else()
 endif()
 
 pybind11_add_module(nn_core NO_EXTRAS
-    src/binding.cpp 
+    src/bindings/module.cpp
+    src/bindings/core.cpp
+    src/bindings/layers.cpp
+    src/bindings/losses.cpp
+    src/bindings/optimizers.cpp 
     src/core/DataLoader.cpp
     src/core/JITGraph.cpp
     src/core/Module.cpp

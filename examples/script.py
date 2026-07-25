@@ -24,6 +24,13 @@ from sklearn.preprocessing import StandardScaler
 import nnengine as nne
 
 # ==========================================
+# SEED LOCKS 
+# ==========================================
+np.random.seed(42)
+torch.manual_seed(42)
+nne.set_seed(42)
+
+# ==========================================
 # Architectures (Parameterized for 2D Shapes)
 # ==========================================
 class PyTorchCNN(nn.Module):
@@ -32,7 +39,7 @@ class PyTorchCNN(nn.Module):
         self.in_h = in_h
         self.in_w = in_w
         self.conv1 = nn.Conv2d(1, 16, kernel_size=3, stride=1, padding=1)
-        self.relu = nn.ReLU()
+        self.relu = nn.LeakyReLU(0.01) # <-- THE FIX: Immune to Dying ReLU
         self.flatten = nn.Flatten()
         self.fc = nn.Linear(16 * in_h * in_w, num_classes)
 
@@ -51,7 +58,7 @@ class NNEngineCNN(nne.Module):
             in_h=in_h, in_w=in_w, 
             kernel_size=3, stride=1, pad=1
         )
-        self.relu = nne.ReLULayer()
+        self.relu = nne.LeakyReLULayer(0.01) # <-- THE FIX: Immune to Dying ReLU
         self.fc = nne.DenseLayer(16 * in_h * in_w, num_classes)
 
     def forward(self, x):
@@ -71,9 +78,16 @@ def test_dataset_vs_pytorch(name, X, y, epochs, lr, batch_size, is_cnn=False, im
     X_train, X_test, y_train, y_test = train_test_split(
         X.astype(np.float32), y.astype(np.int64), test_size=0.2, random_state=42
     )
-    scaler = StandardScaler()
-    X_train_s = scaler.fit_transform(X_train).astype(np.float32)
-    X_test_s = scaler.transform(X_test).astype(np.float32)
+    
+    # Image-safe scaling (avoids 0-variance explosions) vs Standard scaling
+    if is_cnn:
+        max_val = max(X_train.max(), 1.0)
+        X_train_s = X_train / max_val
+        X_test_s = X_test / max_val
+    else:
+        scaler = StandardScaler()
+        X_train_s = scaler.fit_transform(X_train).astype(np.float32)
+        X_test_s = scaler.transform(X_test).astype(np.float32)
 
     y_train_onehot = np.eye(num_classes, dtype=np.float32)[y_train]
 
@@ -92,7 +106,7 @@ def test_dataset_vs_pytorch(name, X, y, epochs, lr, batch_size, is_cnn=False, im
     else:
         pt_model = nn.Sequential(
             nn.Linear(X.shape[1], 32), 
-            nn.ReLU(), 
+            nn.LeakyReLU(0.01), 
             nn.Linear(32, num_classes)
         ).to(device)
         
@@ -125,7 +139,7 @@ def test_dataset_vs_pytorch(name, X, y, epochs, lr, batch_size, is_cnn=False, im
             def __init__(self):
                 super().__init__()
                 self.fc1 = nne.DenseLayer(X.shape[1], 32)
-                self.relu = nne.ReLULayer()
+                self.relu = nne.LeakyReLULayer(0.01)
                 self.fc2 = nne.DenseLayer(32, num_classes)
             def forward(self, x):
                 return self.fc2(self.relu(self.fc1(x)))
@@ -145,7 +159,8 @@ def test_dataset_vs_pytorch(name, X, y, epochs, lr, batch_size, is_cnn=False, im
     trainer.fit(nne_loader, epochs=epochs, verbose=False)
     nn_time = time.perf_counter() - t0
 
-    nn_preds = np.argmax(nn_model.predict(X_test_s), axis=1)
+    # NATIVE BUFFER PROTOCOL FIX: Remove '.data', parse the Tensor directly
+    nn_preds = np.argmax(np.array(nn_model.predict(X_test_s)), axis=1)
     nn_acc = accuracy_score(y_test, nn_preds) * 100
 
     # ---------------------------------------------------------
@@ -170,7 +185,7 @@ if __name__ == "__main__":
     test_dataset_vs_pytorch(
         "Digits (Conv2D CNN)", 
         digits.data, digits.target, 
-        epochs=40, lr=0.005, batch_size=32, 
+        epochs=40, lr=0.001, batch_size=32, 
         is_cnn=True, img_h=8, img_w=8
     )
 
@@ -179,6 +194,6 @@ if __name__ == "__main__":
     test_dataset_vs_pytorch(
         "Olivetti Faces (Conv2D CNN)", 
         faces.data, faces.target, 
-        epochs=40, lr=0.005, batch_size=32, 
+        epochs=40, lr=0.001, batch_size=32, 
         is_cnn=True, img_h=64, img_w=64
     )
