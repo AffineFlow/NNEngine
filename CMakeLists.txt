@@ -109,6 +109,7 @@ pybind11_add_module(nn_core NO_EXTRAS
     src/losses/MSELoss.cpp
     src/losses/SoftmaxCrossEntropyLoss.cpp
     src/optimizers/Adam.cpp
+    src/optimizers/AdamW.cpp
     src/optimizers/SGD.cpp
     src/regularizers/L2Regularizer.cpp
 )

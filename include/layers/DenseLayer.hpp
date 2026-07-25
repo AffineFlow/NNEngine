@@ -45,12 +45,18 @@ class DenseLayer : public core::Layer {
    * @brief Access the current weight matrix.
    * @return Dense weight matrix.
    */
-  core::MatrixRM get_weights() const { return weights_.data; }
+  core::MatrixRM get_weights() const {
+    return Eigen::Map<const core::MatrixRM>(
+        weights_.data.data(), weights_.shape[0], weights_.shape[1]);
+  }
   /**
    * @brief Access the current bias row vector.
    * @return Dense bias matrix.
    */
-  core::MatrixRM get_bias() const { return bias_.data; }
+  core::MatrixRM get_bias() const {
+    return Eigen::Map<const core::MatrixRM>(bias_.data.data(), 1,
+                                            bias_.shape[0]);
+  }
 
  private:
   autograd::Tensor weights_;

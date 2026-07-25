@@ -29,6 +29,7 @@ compile_commands.json
 data/*.csv
 !data/README.md
 *.log
+full_codebase.txt
 
 # --- CMake ---
 CMakeUserPresets.json

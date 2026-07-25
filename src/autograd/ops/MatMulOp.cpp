@@ -1,24 +1,32 @@
 #include "autograd/ops/MatMulOp.hpp"
 
 namespace mlengine::autograd::ops {
+using MatrixMap = Eigen::Map<
+    Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>>;
 
 void MatMulOp::forward() {
-  if (out_->data.rows() != a_->data.rows() ||
-      out_->data.cols() != b_->data.cols()) {
-    out_->data.resize(a_->data.rows(), b_->data.cols());
-    if (out_->requires_grad) {
-      out_->grad.resize(a_->data.rows(), b_->data.cols());
-      out_->grad.setZero();
-    }
-  }
-  out_->data.noalias() = a_->data * b_->data;
+  mlengine::Shape out_shape = {a_->shape[0], b_->shape[1]};
+  if (!out_->has_shape(out_shape)) out_->resize(out_shape);
+
+  MatrixMap A_mat(a_->data.data(), a_->shape[0], a_->shape[1]);
+  MatrixMap B_mat(b_->data.data(), b_->shape[0], b_->shape[1]);
+  MatrixMap Out_mat(out_->data.data(), out_shape[0], out_shape[1]);
+
+  Out_mat.noalias() = A_mat * B_mat;
 }
 
 void MatMulOp::backward() {
-  if (a_->requires_grad)
-    a_->grad.noalias() += out_->grad * b_->data.transpose();
-  if (b_->requires_grad)
-    b_->grad.noalias() += a_->data.transpose() * out_->grad;
-}
+  MatrixMap A_mat(a_->data.data(), a_->shape[0], a_->shape[1]);
+  MatrixMap B_mat(b_->data.data(), b_->shape[0], b_->shape[1]);
+  MatrixMap dOut_mat(out_->grad.data(), out_->shape[0], out_->shape[1]);
 
+  if (a_->requires_grad) {
+    MatrixMap dA_mat(a_->grad.data(), a_->shape[0], a_->shape[1]);
+    dA_mat.noalias() += dOut_mat * B_mat.transpose();
+  }
+  if (b_->requires_grad) {
+    MatrixMap dB_mat(b_->grad.data(), b_->shape[0], b_->shape[1]);
+    dB_mat.noalias() += A_mat.transpose() * dOut_mat;
+  }
+}
 }  // namespace mlengine::autograd::ops

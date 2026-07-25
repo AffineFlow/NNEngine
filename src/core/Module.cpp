@@ -48,7 +48,10 @@ MatrixRM Module::predict(Eigen::Ref<const MatrixRM> X) {
   autograd::Tensor* X_tensor = tape.push_tensor(X, false);
   autograd::Tensor* predictions = this->forward(X_tensor);
   this->train(prev_mode);
-  return predictions->data;
+
+  Eigen::Map<MatrixRM> out_map(predictions->data.data(), predictions->shape[0],
+                               predictions->shape[1]);
+  return out_map;
 }
 
 void Module::save_weights(const std::string& filepath) {
@@ -65,12 +68,13 @@ void Module::save_weights(const std::string& filepath) {
     out.write(reinterpret_cast<const char*>(&name_len), sizeof(size_t));
     out.write(name.c_str(), name_len);
 
-    size_t rows = tensor->data.rows();
-    size_t cols = tensor->data.cols();
-    out.write(reinterpret_cast<const char*>(&rows), sizeof(size_t));
-    out.write(reinterpret_cast<const char*>(&cols), sizeof(size_t));
+    size_t shape_size = tensor->shape.size();
+    out.write(reinterpret_cast<const char*>(&shape_size), sizeof(size_t));
+    for (auto dim : tensor->shape) {
+      out.write(reinterpret_cast<const char*>(&dim), sizeof(Eigen::Index));
+    }
     out.write(reinterpret_cast<const char*>(tensor->data.data()),
-              rows * cols * sizeof(float));
+              tensor->data.size() * sizeof(float));
   }
 }
 
@@ -89,23 +93,28 @@ void Module::load_weights(const std::string& filepath) {
     std::string name(name_len, '\0');
     in.read(&name[0], name_len);
 
-    size_t rows, cols;
-    in.read(reinterpret_cast<char*>(&rows), sizeof(size_t));
-    in.read(reinterpret_cast<char*>(&cols), sizeof(size_t));
+    size_t shape_size;
+    in.read(reinterpret_cast<char*>(&shape_size), sizeof(size_t));
+    std::vector<Eigen::Index> loaded_shape(shape_size);
+    Eigen::Index total_size = 1;
+    for (size_t j = 0; j < shape_size; ++j) {
+      in.read(reinterpret_cast<char*>(&loaded_shape[j]), sizeof(Eigen::Index));
+      total_size *= loaded_shape[j];
+    }
 
     auto it = state_dict.find(name);
     if (it == state_dict.end()) {
-      in.seekg(rows * cols * sizeof(float), std::ios::cur);
+      in.seekg(total_size * sizeof(float), std::ios::cur);
       continue;
     }
 
     auto* p = it->second;
-    if (rows != p->data.rows() || cols != p->data.cols()) {
+    if (p->shape != loaded_shape) {
       throw std::runtime_error(
           "Tensor shape mismatch in saved weights for layer: " + name);
     }
     in.read(reinterpret_cast<char*>(p->data.data()),
-            rows * cols * sizeof(float));
+            total_size * sizeof(float));
   }
 }
 

@@ -1,11 +1,13 @@
 #include "autograd/ops/BatchNorm1dOp.hpp"
 
 namespace mlengine::autograd::ops {
+using ArrayMap = Eigen::Map<
+    Eigen::Array<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>>;
 
 BatchNorm1dOp::BatchNorm1dOp(Tensor* x, Tensor* gamma, Tensor* beta,
-                             Tensor* out, mlengine::MatrixRM* running_mean,
-                             mlengine::MatrixRM* running_var, float momentum,
-                             float eps, const bool* is_training)
+                             Tensor* out, Tensor* running_mean,
+                             Tensor* running_var, float momentum, float eps,
+                             const bool* is_training)
     : x_(x),
       gamma_(gamma),
       beta_(beta),
@@ -17,72 +19,70 @@ BatchNorm1dOp::BatchNorm1dOp(Tensor* x, Tensor* gamma, Tensor* beta,
       is_training_(is_training) {}
 
 void BatchNorm1dOp::forward() {
-  int batch = x_->data.rows();
-  int feat = x_->data.cols();
+  if (!out_->has_shape(x_->shape)) out_->resize(x_->shape);
 
-  if (out_->data.rows() != batch || out_->data.cols() != feat) {
-    out_->data.resize(batch, feat);
-    if (out_->requires_grad) {
-      out_->grad.resize(batch, feat);
-      out_->grad.setZero();
-    }
-  }
+  int batch = x_->shape[0];
+  int feat = x_->shape[1];
+
+  ArrayMap x_arr(x_->data.data(), batch, feat);
+  ArrayMap gamma_arr(gamma_->data.data(), 1, feat);
+  ArrayMap beta_arr(beta_->data.data(), 1, feat);
+  ArrayMap out_arr(out_->data.data(), batch, feat);
+  Eigen::Map<Eigen::ArrayXf> r_mean(running_mean_->data.data(), feat);
+  Eigen::Map<Eigen::ArrayXf> r_var(running_var_->data.data(), feat);
 
   if (*is_training_) {
-    mlengine::MatrixRM batch_mean = x_->data.colwise().mean();
-    x_centered_ = x_->data.rowwise() - batch_mean.row(0);
-    mlengine::MatrixRM batch_var =
-        x_centered_.array().square().colwise().mean();
-    stddev_inv_ = (batch_var.array() + eps_).inverse().sqrt();
+    Eigen::ArrayXf batch_mean = x_arr.colwise().mean();
+    x_centered_ = (x_arr.rowwise() - batch_mean.transpose()).matrix();
 
-    x_hat_ = x_centered_.array().rowwise() * stddev_inv_.row(0).array();
+    Eigen::ArrayXf batch_var = x_centered_.array().square().colwise().mean();
+    stddev_inv_ = (batch_var + eps_).inverse().sqrt().matrix().transpose();
 
-    *running_mean_ = (1.0f - momentum_) * running_mean_->array() +
-                     momentum_ * batch_mean.array();
+    x_hat_ =
+        (x_centered_.array().rowwise() * stddev_inv_.row(0).array()).matrix();
+
+    r_mean = (1.0f - momentum_) * r_mean + momentum_ * batch_mean;
     float unbias = batch > 1 ? static_cast<float>(batch) / (batch - 1) : 1.0f;
-    *running_var_ = (1.0f - momentum_) * running_var_->array() +
-                    momentum_ * batch_var.array() * unbias;
+    r_var = (1.0f - momentum_) * r_var + momentum_ * batch_var * unbias;
 
-    out_->data =
-        (x_hat_.array().rowwise() * gamma_->data.row(0).array()).rowwise() +
-        beta_->data.row(0).array();
+    out_arr = (x_hat_.array().rowwise() * gamma_arr.row(0)).rowwise() +
+              beta_arr.row(0);
   } else {
-    mlengine::MatrixRM std_inv =
-        (running_var_->array() + eps_).inverse().sqrt();
-    mlengine::MatrixRM x_hat_eval =
-        (x_->data.rowwise() - running_mean_->row(0)).array().rowwise() *
-        std_inv.row(0).array();
-    out_->data =
-        (x_hat_eval.array().rowwise() * gamma_->data.row(0).array()).rowwise() +
-        beta_->data.row(0).array();
+    Eigen::ArrayXf std_inv = (r_var + eps_).inverse().sqrt();
+    Eigen::ArrayXXf x_hat_eval =
+        (x_arr.rowwise() - r_mean.transpose()).rowwise() * std_inv.transpose();
+    out_arr =
+        (x_hat_eval.rowwise() * gamma_arr.row(0)).rowwise() + beta_arr.row(0);
   }
 }
 
 void BatchNorm1dOp::backward() {
   if (!*is_training_) return;
-  int batch = x_->data.rows();
+  int batch = x_->shape[0];
+  int feat = x_->shape[1];
+
+  ArrayMap dx_arr(x_->grad.data(), batch, feat);
+  ArrayMap dgamma_arr(gamma_->grad.data(), 1, feat);
+  ArrayMap dbeta_arr(beta_->grad.data(), 1, feat);
+  ArrayMap dout_arr(out_->grad.data(), batch, feat);
+  ArrayMap gamma_arr(gamma_->data.data(), 1, feat);
 
   if (gamma_->requires_grad) {
-    gamma_->grad.row(0) += (out_->grad.cwiseProduct(x_hat_)).colwise().sum();
+    dgamma_arr.row(0) += (dout_arr * x_hat_.array()).colwise().sum();
   }
   if (beta_->requires_grad) {
-    beta_->grad.row(0) += out_->grad.colwise().sum();
+    dbeta_arr.row(0) += dout_arr.colwise().sum();
   }
-
   if (x_->requires_grad) {
-    mlengine::MatrixRM dx_hat =
-        out_->grad.array().rowwise() * gamma_->data.row(0).array();
-    mlengine::MatrixRM dx_hat_sum = dx_hat.colwise().sum();
-    mlengine::MatrixRM dx_hat_x_hat_sum =
-        (dx_hat.cwiseProduct(x_hat_)).colwise().sum();
+    Eigen::ArrayXXf dx_hat = dout_arr.rowwise() * gamma_arr.row(0);
+    Eigen::ArrayXf dx_hat_sum = dx_hat.colwise().sum();
+    Eigen::ArrayXf dx_hat_x_hat_sum = (dx_hat * x_hat_.array()).colwise().sum();
 
-    mlengine::MatrixRM term =
-        (dx_hat * static_cast<float>(batch)).rowwise() - dx_hat_sum.row(0);
-    term.array() -= x_hat_.array().rowwise() * dx_hat_x_hat_sum.row(0).array();
+    Eigen::ArrayXXf term =
+        (dx_hat * static_cast<float>(batch)).rowwise() - dx_hat_sum.transpose();
+    term -= x_hat_.array().rowwise() * dx_hat_x_hat_sum.transpose();
 
-    x_->grad.array() +=
-        term.array().rowwise() * (stddev_inv_.row(0).array() * (1.0f / batch));
+    dx_arr += term.rowwise() * (stddev_inv_.row(0).array() * (1.0f / batch));
   }
 }
-
 }  // namespace mlengine::autograd::ops

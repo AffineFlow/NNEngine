@@ -28,6 +28,7 @@
 #include "losses/MSELoss.hpp"
 #include "losses/SoftmaxCrossEntropyLoss.hpp"
 #include "optimizers/Adam.hpp"
+#include "optimizers/AdamW.hpp"
 #include "optimizers/SGD.hpp"
 #include "regularizers/L2Regularizer.hpp"
 
@@ -53,29 +54,39 @@ Args:
   seed: Seed value to apply to the global generators.
 )pbdoc");
 
-  py::class_<mlengine::autograd::Tensor>(m, "Tensor", R"pbdoc(
-Dense value-and-gradient container used by the autograd engine.
-
-Tensors store the forward value in row-major Eigen storage and, when
-gradients are enabled, a matching gradient buffer that is accumulated during
-backpropagation.
-)pbdoc")
+  py::class_<mlengine::autograd::Tensor>(m, "Tensor", py::buffer_protocol(),
+                                         R"pbdoc(
+  N-Dimensional value-and-gradient container used by the autograd engine.
+  )pbdoc")
       .def_property(
-          "data",
-          [](mlengine::autograd::Tensor& t) -> Eigen::Ref<mlengine::MatrixRM> {
-            return t.data;
-          },
-          [](mlengine::autograd::Tensor& t, const mlengine::MatrixRM& v) {
-            t.data = v;
+          "shape", [](const mlengine::autograd::Tensor& t) { return t.shape; },
+          [](mlengine::autograd::Tensor& t, const mlengine::Shape& s) {
+            t.resize(s);
           })
-      .def_property(
-          "grad",
-          [](mlengine::autograd::Tensor& t) -> Eigen::Ref<mlengine::MatrixRM> {
-            return t.grad;
-          },
-          [](mlengine::autograd::Tensor& t, const mlengine::MatrixRM& v) {
-            t.grad = v;
-          })
+      .def_property_readonly("data",
+                             [](mlengine::autograd::Tensor& t) {
+                               std::vector<py::ssize_t> strides(t.shape.size());
+                               py::ssize_t stride = sizeof(float);
+                               for (int i = t.shape.size() - 1; i >= 0; --i) {
+                                 strides[i] = stride;
+                                 stride *= t.shape[i];
+                               }
+                               return py::array_t<float>(t.shape, strides,
+                                                         t.data.data(),
+                                                         py::cast(&t));
+                             })
+      .def_property_readonly("grad",
+                             [](mlengine::autograd::Tensor& t) {
+                               std::vector<py::ssize_t> strides(t.shape.size());
+                               py::ssize_t stride = sizeof(float);
+                               for (int i = t.shape.size() - 1; i >= 0; --i) {
+                                 strides[i] = stride;
+                                 stride *= t.shape[i];
+                               }
+                               return py::array_t<float>(t.shape, strides,
+                                                         t.grad.data(),
+                                                         py::cast(&t));
+                             })
       .def_property(
           "requires_grad",
           [](const mlengine::autograd::Tensor& t) { return t.requires_grad; },
@@ -84,10 +95,12 @@ backpropagation.
           })
       .def("__repr__", [](const mlengine::autograd::Tensor& t) {
         std::ostringstream oss;
-        oss << "Tensor(shape=(" << t.data.rows() << ", " << t.data.cols()
-            << "), requires_grad=" << (t.requires_grad ? "True" : "False")
-            << ")\n"
-            << t.data;
+        oss << "Tensor(shape=(";
+        for (size_t i = 0; i < t.shape.size(); ++i) {
+          oss << t.shape[i] << (i == t.shape.size() - 1 ? "" : ", ");
+        }
+        oss << "), requires_grad=" << (t.requires_grad ? "True" : "False")
+            << ")";
         return oss.str();
       });
 
@@ -127,13 +140,12 @@ Args:
             t.record_ops_ = value;
           })
       .def("alloc_tensor", &mlengine::autograd::Tape::alloc_tensor,
-           py::arg("rows"), py::arg("cols"), py::arg("requires_grad") = true,
+           py::arg("shape"), py::arg("requires_grad") = true,
            py::return_value_policy::reference, R"pbdoc(
 Allocate a tensor from the tape's arena.
 
 Args:
-  rows: Number of rows.
-  cols: Number of columns.
+  shape: Shape vector.
   requires_grad: Whether the tensor participates in autograd.
 
 Returns:
@@ -326,6 +338,14 @@ Construct Adam with the supplied learning rate.
 Args:
   learning_rate: Base step size used for updates.
 )pbdoc");
+
+  py::class_<AdamW, Optimizer, std::shared_ptr<AdamW>>(m, "AdamW", R"pbdoc(
+  AdamW optimizer with decoupled weight decay.
+  )pbdoc")
+      .def(py::init<float, float>(), py::arg("learning_rate") = 0.001f,
+           py::arg("weight_decay") = 0.01f, R"pbdoc(
+  Construct AdamW.
+  )pbdoc");
 
   py::class_<Scheduler, std::shared_ptr<Scheduler>>(m, "Scheduler", R"pbdoc(
 Base class for learning rate scheduling.

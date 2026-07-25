@@ -1,7 +1,6 @@
 #include "regularizers/L2Regularizer.hpp"
 
 namespace mlengine::core {
-
 L2Regularizer::L2Regularizer(float l2) : l2_(l2) {}
 
 float L2Regularizer::apply(const std::vector<autograd::Tensor*>& parameters) {
@@ -11,12 +10,11 @@ float L2Regularizer::apply(const std::vector<autograd::Tensor*>& parameters) {
 
     float* p_ptr = p->data.data();
     float* g_ptr = p->grad.data();
-    size_t size = p->data.size();
-
+    Eigen::Index size = p->data.size();
     float local_penalty = 0.0f;
 
 #pragma omp simd reduction(+ : local_penalty)
-    for (size_t j = 0; j < size; ++j) {
+    for (Eigen::Index j = 0; j < size; ++j) {
       local_penalty += p_ptr[j] * p_ptr[j];
       g_ptr[j] += l2_ * p_ptr[j];
     }
@@ -24,5 +22,4 @@ float L2Regularizer::apply(const std::vector<autograd::Tensor*>& parameters) {
   }
   return penalty;
 }
-
 }  // namespace mlengine::core

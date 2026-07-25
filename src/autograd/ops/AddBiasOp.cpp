@@ -1,22 +1,29 @@
 #include "autograd/ops/AddBiasOp.hpp"
 
 namespace mlengine::autograd::ops {
+using MatrixMap = Eigen::Map<
+    Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>>;
 
 void AddBiasOp::forward() {
-  if (out_->data.rows() != a_->data.rows() ||
-      out_->data.cols() != a_->data.cols()) {
-    out_->data.resize(a_->data.rows(), a_->data.cols());
-    if (out_->requires_grad) {
-      out_->grad.resize(a_->data.rows(), a_->data.cols());
-      out_->grad.setZero();
-    }
-  }
-  out_->data.noalias() = a_->data.rowwise() + b_->data.row(0);
+  if (!out_->has_shape(a_->shape)) out_->resize(a_->shape);
+
+  MatrixMap A_mat(a_->data.data(), a_->shape[0], a_->shape[1]);
+  MatrixMap B_mat(b_->data.data(), 1, b_->shape[0]);
+  MatrixMap Out_mat(out_->data.data(), out_->shape[0], out_->shape[1]);
+
+  Out_mat.noalias() = A_mat.rowwise() + B_mat.row(0);
 }
 
 void AddBiasOp::backward() {
-  if (a_->requires_grad) a_->grad.noalias() += out_->grad;
-  if (b_->requires_grad) b_->grad.noalias() += out_->grad.colwise().sum();
-}
+  MatrixMap dOut_mat(out_->grad.data(), out_->shape[0], out_->shape[1]);
 
+  if (a_->requires_grad) {
+    MatrixMap dA_mat(a_->grad.data(), a_->shape[0], a_->shape[1]);
+    dA_mat.noalias() += dOut_mat;
+  }
+  if (b_->requires_grad) {
+    MatrixMap dB_mat(b_->grad.data(), 1, b_->shape[0]);
+    dB_mat.noalias() += dOut_mat.colwise().sum();
+  }
+}
 }  // namespace mlengine::autograd::ops

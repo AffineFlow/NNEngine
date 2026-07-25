@@ -1,5 +1,6 @@
 #include "autograd/Tape.hpp"
 
+#include <algorithm>
 #include <stdexcept>
 
 namespace mlengine::autograd {
@@ -19,44 +20,48 @@ Tape* Tape::get_global() {
 
 Tape::Tape(bool record_ops) : record_ops_(record_ops) { ops_.reserve(10000); }
 
-Tensor* Tape::alloc_tensor(int rows, int cols, bool requires_grad) {
+Tensor* Tape::alloc_tensor(const mlengine::Shape& shape, bool requires_grad) {
   bool req_grad_actual = record_ops_ && requires_grad;
+
   if (tensor_idx_ >= tensor_pool_.size()) {
-    tensor_pool_.emplace_back(mlengine::MatrixRM(rows, cols), req_grad_actual);
+    tensor_pool_.emplace_back(shape, req_grad_actual);
   } else {
-    if (tensor_pool_[tensor_idx_].data.rows() != rows ||
-        tensor_pool_[tensor_idx_].data.cols() != cols) {
-      tensor_pool_[tensor_idx_].data.resize(rows, cols);
-    }
     tensor_pool_[tensor_idx_].requires_grad = req_grad_actual;
+    tensor_pool_[tensor_idx_].resize(shape);
     if (req_grad_actual) {
-      if (tensor_pool_[tensor_idx_].grad.rows() != rows ||
-          tensor_pool_[tensor_idx_].grad.cols() != cols) {
-        tensor_pool_[tensor_idx_].grad.resize(rows, cols);
-      }
       tensor_pool_[tensor_idx_].grad.setZero();
     }
   }
   return &tensor_pool_[tensor_idx_++];
 }
 
-Tensor* Tape::push_tensor(const mlengine::MatrixRM& data, bool requires_grad) {
-  return push_expr(data, requires_grad);
+Tensor* Tape::push_tensor(const mlengine::MatrixRM& input_data,
+                          bool requires_grad) {
+  mlengine::Shape shape = {input_data.rows(), input_data.cols()};
+  Tensor* t = alloc_tensor(shape, requires_grad);
+  std::copy(input_data.data(), input_data.data() + input_data.size(),
+            t->data.data());
+  return t;
 }
 
 void Tape::record_op(std::shared_ptr<Op> op) {
   if (record_ops_) ops_.push_back(op);
 }
+
 void Tape::replay_forward() {
   for (auto& op : ops_) op->forward();
 }
+
 void Tape::replay_backward() {
   for (auto it = ops_.rbegin(); it != ops_.rend(); ++it) (*it)->backward();
 }
+
 void Tape::zero_grads() {
   for (auto& t : tensor_pool_) t.zero_grad();
 }
+
 void Tape::backward() { replay_backward(); }
+
 void Tape::reset() {
   ops_.clear();
   tensor_idx_ = 0;

@@ -1,5 +1,6 @@
 #include "core/JITGraph.hpp"
 
+#include <algorithm>
 #include <fstream>
 #include <iostream>
 
@@ -25,8 +26,8 @@ float JITGraph::train_step(const MatrixRM& X, const MatrixRM& y) {
     X_input_ = tape_->push_tensor(X, false);
     y_input_ = tape_->push_tensor(y, false);
   } else {
-    X_input_->data = X;
-    y_input_->data = y;
+    std::copy(X.data(), X.data() + X.size(), X_input_->data.data());
+    std::copy(y.data(), y.data() + y.size(), y_input_->data.data());
   }
   optimizer_->zero_grad();
   tape_->zero_grads();
@@ -61,8 +62,14 @@ float JITGraph::trace_batch(DataLoader& dataloader) {
 std::pair<float, size_t> JITGraph::fast_loop(DataLoader& dataloader) {
   float total_loss = 0.0f;
   size_t batch_count = 0;
+  MatrixRM X_batch, y_batch;
   while (dataloader.has_next()) {
-    dataloader.next_batch(X_input_->data, y_input_->data);
+    dataloader.next_batch(X_batch, y_batch);
+    std::copy(X_batch.data(), X_batch.data() + X_batch.size(),
+              X_input_->data.data());
+    std::copy(y_batch.data(), y_batch.data() + y_batch.size(),
+              y_input_->data.data());
+
     optimizer_->zero_grad();
     tape_->zero_grads();
     tape_->replay_forward();
@@ -81,8 +88,14 @@ float JITGraph::evaluate(DataLoader& dataloader) {
   model_->train(false);
   float total_loss = 0.0f;
   size_t batch_count = 0;
+  MatrixRM X_batch, y_batch;
   while (dataloader.has_next()) {
-    dataloader.next_batch(X_input_->data, y_input_->data);
+    dataloader.next_batch(X_batch, y_batch);
+    std::copy(X_batch.data(), X_batch.data() + X_batch.size(),
+              X_input_->data.data());
+    std::copy(y_batch.data(), y_batch.data() + y_batch.size(),
+              y_input_->data.data());
+
     tape_->replay_forward();
     float loss = loss_fn_->forward(predictions_, y_input_);
     total_loss += loss;
@@ -97,7 +110,7 @@ void JITGraph::fast_fit(DataLoader& dataloader, DataLoader* val_dataloader,
                         bool verbose) {
   float best_loss = std::numeric_limits<float>::infinity();
   int no_improvement_count = 0;
-  std::vector<MatrixRM> best_weights;
+  std::vector<mlengine::FlatStorage> best_weights;
 
   for (int epoch = 0; epoch < epochs; ++epoch) {
     dataloader.reset();
@@ -105,28 +118,35 @@ void JITGraph::fast_fit(DataLoader& dataloader, DataLoader* val_dataloader,
     float avg_train_loss =
         total_loss / static_cast<float>(std::max(size_t(1), batches));
     float metric_loss = avg_train_loss;
+
     if (val_dataloader) {
       val_dataloader->reset();
       metric_loss = evaluate(*val_dataloader);
     }
+
     if (verbose &&
         (epoch % std::max(1, epochs / 10) == 0 || epoch == epochs - 1)) {
       std::cout << "Epoch " << epoch << " | Train Loss: " << avg_train_loss;
       if (val_dataloader) std::cout << " | Val Loss: " << metric_loss;
       std::cout << std::endl;
     }
-    if (best_loss - metric_loss > tol) {
-      best_loss = metric_loss;
-      no_improvement_count = 0;
-      best_weights.clear();
-      for (auto* p : parameters_) best_weights.push_back(p->data);
-    } else if (++no_improvement_count >= n_iter_no_change) {
-      if (verbose) std::cout << "Early stopping at epoch " << epoch << "\n";
-      break;
+
+    if (val_dataloader) {
+      if (best_loss - metric_loss > tol) {
+        best_loss = metric_loss;
+        no_improvement_count = 0;
+        best_weights.clear();
+        for (auto* p : parameters_) best_weights.push_back(p->data);
+      } else if (++no_improvement_count >= n_iter_no_change) {
+        if (verbose) std::cout << "Early stopping at epoch " << epoch << "\n";
+        break;
+      }
     }
+
     if (scheduler_) scheduler_->step();
   }
-  if (!best_weights.empty()) {
+
+  if (val_dataloader && !best_weights.empty()) {
     for (size_t i = 0; i < parameters_.size(); ++i)
       parameters_[i]->data = best_weights[i];
   }
