@@ -49,6 +49,7 @@ jobs:
           CIBW_BEFORE_ALL_LINUX: yum install -y ccache
           CIBW_BEFORE_ALL_MACOS: brew install libomp ccache
           CIBW_BUILD_FRONTEND: pip
+          CIBW_ARCHS_MACOS: arm64
           
           CIBW_ENVIRONMENT_LINUX: >
             PATH="/usr/lib64/ccache:/usr/lib/ccache:$PATH"
@@ -60,7 +61,7 @@ jobs:
             CMAKE_CXX_COMPILER_LAUNCHER=ccache
             CCACHE_DIR=${{ github.workspace }}/.ccache
             CCACHE_COMPILERCHECK=content
-            MACOSX_DEPLOYMENT_TARGET="15.0"
+            CMAKE_OSX_ARCHITECTURES="arm64"
 
       - name: Fix cache permissions for Docker
         if: runner.os == 'Linux'
