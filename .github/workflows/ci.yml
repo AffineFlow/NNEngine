@@ -25,7 +25,7 @@ jobs:
       - name: Install dependencies
         run: pip install pytest numpy pybind11-stubgen ninja cmake scikit-build-core
         
-      - name: Build engine in DEV mode
+      - name: Build engine
         run: pip install -e .
         
       - name: Run C++ Unit Tests
