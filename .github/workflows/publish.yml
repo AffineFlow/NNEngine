@@ -60,9 +60,11 @@ jobs:
           CIBW_ENVIRONMENT_MACOS: >
             CMAKE_C_COMPILER_LAUNCHER=ccache
             CMAKE_CXX_COMPILER_LAUNCHER=ccache
+            CFLAGS="-arch arm64"
+            CXXFLAGS="-arch arm64"
             CCACHE_DIR=${{ github.workspace }}/.ccache
             CCACHE_COMPILERCHECK=content
-            SKBUILD_CMAKE_ARGS="-DCMAKE_OSX_ARCHITECTURES=arm64;-DCMAKE_OSX_DEPLOYMENT_TARGET=11.0"
+            MACOSX_DEPLOYMENT_TARGET="11.0"
 
       - name: Fix cache permissions for Docker
         if: runner.os == 'Linux'
