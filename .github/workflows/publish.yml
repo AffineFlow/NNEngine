@@ -56,12 +56,13 @@ jobs:
             CMAKE_CXX_COMPILER_LAUNCHER=ccache
             CCACHE_DIR=/project/.ccache
             CCACHE_COMPILERCHECK=content
+            
           CIBW_ENVIRONMENT_MACOS: >
-            PATH="/opt/homebrew/opt/ccache/libexec:/usr/local/opt/ccache/libexec:$PATH"
+            CMAKE_C_COMPILER_LAUNCHER=ccache
             CMAKE_CXX_COMPILER_LAUNCHER=ccache
             CCACHE_DIR=${{ github.workspace }}/.ccache
             CCACHE_COMPILERCHECK=content
-            CMAKE_OSX_ARCHITECTURES="arm64"
+            SKBUILD_CMAKE_ARGS="-DCMAKE_OSX_ARCHITECTURES=arm64 -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0"
 
       - name: Fix cache permissions for Docker
         if: runner.os == 'Linux'
