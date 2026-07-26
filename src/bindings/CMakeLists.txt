@@ -8,4 +8,4 @@ pybind11_add_module(_backend NO_EXTRAS
 
 target_link_libraries(_backend PRIVATE NNEngine::Core)
 
-install(TARGETS _backend DESTINATION ${CMAKE_SOURCE_DIR}/nnengine)
+install(TARGETS _backend DESTINATION nnengine)
