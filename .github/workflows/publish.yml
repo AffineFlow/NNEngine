@@ -23,7 +23,7 @@ jobs:
 
     steps:
       - uses: actions/checkout@v7
-      
+
       - name: Download generated stubs
         uses: actions/download-artifact@v8
         with:
@@ -50,13 +50,13 @@ jobs:
           CIBW_BEFORE_ALL_MACOS: brew install libomp ccache
           CIBW_BUILD_FRONTEND: pip
           CIBW_ARCHS_MACOS: arm64
-          
+
           CIBW_ENVIRONMENT_LINUX: >
             PATH="/usr/lib64/ccache:/usr/lib/ccache:$PATH"
             CMAKE_CXX_COMPILER_LAUNCHER=ccache
             CCACHE_DIR=/project/.ccache
             CCACHE_COMPILERCHECK=content
-            
+
           CIBW_ENVIRONMENT_MACOS: >
             CMAKE_C_COMPILER_LAUNCHER=ccache
             CMAKE_CXX_COMPILER_LAUNCHER=ccache
@@ -64,6 +64,15 @@ jobs:
             CCACHE_COMPILERCHECK=content
             MACOSX_DEPLOYMENT_TARGET="11.0"
             SKBUILD_CMAKE_ARGS="-DCMAKE_OSX_ARCHITECTURES=arm64"
+            ARCHFLAGS="-arch arm64"
+            _PYTHON_HOST_PLATFORM="macosx-11.0-arm64"
+
+          # Temporary diagnostic: shows the real arch of the built .so before
+          # delocate runs. Remove once the arm64 build is confirmed stable.
+          CIBW_REPAIR_WHEEL_COMMAND_MACOS: >
+            bash -c "for f in $(unzip -Z1 {wheel} | grep '\.so$'); do
+              unzip -p {wheel} $f | file -; done &&
+            delocate-wheel --require-archs {delocate_archs} -w {dest_dir} -v {wheel}"
 
       - name: Fix cache permissions for Docker
         if: runner.os == 'Linux'
@@ -81,16 +90,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      
+
       - name: Download generated stubs
         uses: actions/download-artifact@v8
         with:
           name: py-stubs
           path: nnengine/
-          
+
       - name: Build sdist
         run: pipx run build --sdist
-        
+
       - uses: actions/upload-artifact@v7
         with:
           name: cibw-sdist
