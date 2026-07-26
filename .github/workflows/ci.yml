@@ -55,6 +55,7 @@ jobs:
         with:
           commit_message: "chore: auto-update pyi stubs and py.typed"
           file_pattern: "nnengine/_backend*.pyi nnengine/py.typed"
+          branch: main
           
       - name: Upload stubs as artifact for wheel builders
         uses: actions/upload-artifact@v7
