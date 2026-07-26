@@ -4,6 +4,11 @@ add_library(NNEngine STATIC
     core/Module.cpp
     autograd/Tape.cpp
     autograd/ops/AddBiasOp.cpp
+    autograd/ops/AddOp.cpp
+    autograd/ops/SubOp.cpp
+    autograd/ops/MulOp.cpp
+    autograd/ops/DivOp.cpp
+    autograd/ops/AddBiasOp.cpp
     autograd/ops/BatchNorm1dOp.cpp
     autograd/ops/Conv2dOp.cpp
     autograd/ops/DropoutOp.cpp

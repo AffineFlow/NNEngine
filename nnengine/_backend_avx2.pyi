@@ -371,6 +371,10 @@ class Tensor:
     """
     A multi-dimensional array with autograd support.
     """
+    def __add__(self, other: Tensor) -> Tensor:
+        """
+        Element-wise addition of two tensors. Records to the active autograd tape.
+        """
     def __buffer__(self, flags):
         """
         Return a buffer object that exposes the underlying memory of the object.
@@ -379,12 +383,28 @@ class Tensor:
         """
         Initialize a tensor from a NumPy array.
         """
+    def __matmul__(self, other: Tensor) -> Tensor:
+        """
+        Matrix multiplication of two 2D tensors. Records to the active autograd tape.
+        """
+    def __mul__(self, other: Tensor) -> Tensor:
+        """
+        Element-wise multiplication of two tensors. Records to the active autograd tape.
+        """
     def __release_buffer__(self, buffer):
         """
         Release the buffer object that exposes the underlying memory of the object.
         """
     def __repr__(self) -> str:
         ...
+    def __sub__(self, other: Tensor) -> Tensor:
+        """
+        Element-wise subtraction of two tensors. Records to the active autograd tape.
+        """
+    def __truediv__(self, other: Tensor) -> Tensor:
+        """
+        Element-wise division of two tensors. Records to the active autograd tape.
+        """
     @property
     def data(self) -> numpy.typing.NDArray[numpy.float32]:
         """

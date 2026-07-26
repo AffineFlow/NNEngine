@@ -8,7 +8,12 @@
 #include "autograd/Op.hpp"
 #include "autograd/Tape.hpp"
 #include "autograd/Tensor.hpp"
+#include "autograd/ops/AddOp.hpp"
+#include "autograd/ops/DivOp.hpp"
+#include "autograd/ops/MatMulOp.hpp"
+#include "autograd/ops/MulOp.hpp"
 #include "autograd/ops/PyOp.hpp"
+#include "autograd/ops/SubOp.hpp"
 #include "core/DataLoader.hpp"
 #include "core/Random.hpp"
 
@@ -89,16 +94,114 @@ void bind_core_utils(py::module_& m) {
           },
           "Whether this tensor should accumulate gradients during the backward "
           "pass.")
-      .def("__repr__", [](const mlengine::autograd::Tensor& t) {
-        std::ostringstream oss;
-        oss << "Tensor(shape=(";
-        for (size_t i = 0; i < t.shape.size(); ++i) {
-          oss << t.shape[i] << (i == t.shape.size() - 1 ? "" : ", ");
-        }
-        oss << "), requires_grad=" << (t.requires_grad ? "True" : "False")
-            << ")";
-        return oss.str();
-      });
+      .def("__repr__",
+           [](const mlengine::autograd::Tensor& t) {
+             std::ostringstream oss;
+             oss << "Tensor(shape=(";
+             for (size_t i = 0; i < t.shape.size(); ++i) {
+               oss << t.shape[i] << (i == t.shape.size() - 1 ? "" : ", ");
+             }
+             oss << "), requires_grad=" << (t.requires_grad ? "True" : "False")
+                 << ")";
+             return oss.str();
+           })
+      .def(
+          "__add__",
+          [](mlengine::autograd::Tensor& self,
+             mlengine::autograd::Tensor& other) {
+            auto* tape = mlengine::autograd::Tape::get_global();
+            bool req_grad = tape->record_ops_ &&
+                            (self.requires_grad || other.requires_grad);
+            auto* out = tape->alloc_tensor(self.shape, req_grad);
+            auto op = std::make_shared<mlengine::autograd::ops::AddOp>(
+                &self, &other, out);
+            op->forward();
+            tape->record_op(op);
+            return out;
+          },
+          py::arg("other"),
+          "Element-wise addition of two tensors. Records to the active "
+          "autograd tape.",
+          py::return_value_policy::reference)
+
+      .def(
+          "__sub__",
+          [](mlengine::autograd::Tensor& self,
+             mlengine::autograd::Tensor& other) {
+            auto* tape = mlengine::autograd::Tape::get_global();
+            bool req_grad = tape->record_ops_ &&
+                            (self.requires_grad || other.requires_grad);
+            auto* out = tape->alloc_tensor(self.shape, req_grad);
+            auto op = std::make_shared<mlengine::autograd::ops::SubOp>(
+                &self, &other, out);
+            op->forward();
+            tape->record_op(op);
+            return out;
+          },
+          py::arg("other"),
+          "Element-wise subtraction of two tensors. Records to the active "
+          "autograd tape.",
+          py::return_value_policy::reference)
+
+      .def(
+          "__mul__",
+          [](mlengine::autograd::Tensor& self,
+             mlengine::autograd::Tensor& other) {
+            auto* tape = mlengine::autograd::Tape::get_global();
+            bool req_grad = tape->record_ops_ &&
+                            (self.requires_grad || other.requires_grad);
+            auto* out = tape->alloc_tensor(self.shape, req_grad);
+            auto op = std::make_shared<mlengine::autograd::ops::MulOp>(
+                &self, &other, out);
+            op->forward();
+            tape->record_op(op);
+            return out;
+          },
+          py::arg("other"),
+          "Element-wise multiplication of two tensors. Records to the active "
+          "autograd tape.",
+          py::return_value_policy::reference)
+
+      .def(
+          "__truediv__",
+          [](mlengine::autograd::Tensor& self,
+             mlengine::autograd::Tensor& other) {
+            auto* tape = mlengine::autograd::Tape::get_global();
+            bool req_grad = tape->record_ops_ &&
+                            (self.requires_grad || other.requires_grad);
+            auto* out = tape->alloc_tensor(self.shape, req_grad);
+            auto op = std::make_shared<mlengine::autograd::ops::DivOp>(
+                &self, &other, out);
+            op->forward();
+            tape->record_op(op);
+            return out;
+          },
+          py::arg("other"),
+          "Element-wise division of two tensors. Records to the active "
+          "autograd tape.",
+          py::return_value_policy::reference)
+
+      .def(
+          "__matmul__",
+          [](mlengine::autograd::Tensor& self,
+             mlengine::autograd::Tensor& other) {
+            auto* tape = mlengine::autograd::Tape::get_global();
+            if (self.shape.size() != 2 || other.shape.size() != 2)
+              throw std::invalid_argument("MatMul requires 2D tensors");
+            bool req_grad = tape->record_ops_ &&
+                            (self.requires_grad || other.requires_grad);
+            auto* out =
+                tape->alloc_tensor({self.shape[0], other.shape[1]}, req_grad);
+            auto op = std::make_shared<mlengine::autograd::ops::MatMulOp>(
+                &self, &other, out);
+            op->forward();
+            tape->record_op(op);
+            return out;
+          },
+          py::arg("other"),
+          "Matrix multiplication of two 2D tensors. Records to the active "
+          "autograd tape.",
+          py::return_value_policy::reference);
 
   py::implicitly_convertible<py::array_t<float>, mlengine::autograd::Tensor>();
 
