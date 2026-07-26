@@ -71,8 +71,8 @@ else()
         set(TARGET "GENERIC" CACHE STRING "Target CPU for OpenBLAS" FORCE)
 
         FetchContent_Declare(
-            OpenBLAS 
-            URL "https://github.com/OpenMathLib/OpenBLAS/releases/download/v0.3.26/OpenBLAS-0.3.26.tar.gz" 
+            OpenBLAS
+            URL "https://github.com/OpenMathLib/OpenBLAS/releases/download/v0.3.26/OpenBLAS-0.3.26.tar.gz"
             EXCLUDE_FROM_ALL TRUE
         )
         FetchContent_MakeAvailable(OpenBLAS)
