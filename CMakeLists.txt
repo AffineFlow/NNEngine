@@ -70,9 +70,11 @@ else()
         set(BUILD_TESTING OFF CACHE BOOL "Disable OpenBLAS tests" FORCE)
         set(TARGET "GENERIC" CACHE STRING "Target CPU for OpenBLAS" FORCE)
 
+        set(OPENBLAS_URL "https://github.com/OpenMathLib/OpenBLAS/releases/download/v0.3.26/OpenBLAS-0.3.26.tar.gz")
+
         FetchContent_Declare(
             OpenBLAS
-            URL "https://github.com/OpenMathLib/OpenBLAS/releases/download/v0.3.26/OpenBLAS-0.3.26.tar.gz"
+            URL "${OPENBLAS_URL}"
             EXCLUDE_FROM_ALL TRUE
         )
         FetchContent_MakeAvailable(OpenBLAS)
