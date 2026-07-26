@@ -36,19 +36,30 @@ jobs:
         
       - name: Generate Type Stubs (.pyi) and py.typed
         run: |
-          pybind11-stubgen nnengine._backend -o .
+          pybind11-stubgen nnengine._backend_generic -o . || true
+          pybind11-stubgen nnengine._backend_avx2 -o . || true
+          pybind11-stubgen nnengine._backend_avx512 -o . || true
+          
+          if [ -f nnengine/_backend_avx512.pyi ]; then
+            cp nnengine/_backend_avx512.pyi nnengine/_backend.pyi
+          elif [ -f nnengine/_backend_avx2.pyi ]; then
+            cp nnengine/_backend_avx2.pyi nnengine/_backend.pyi
+          elif [ -f nnengine/_backend_generic.pyi ]; then
+            cp nnengine/_backend_generic.pyi nnengine/_backend.pyi
+          fi
+          
           touch nnengine/py.typed
           
       - name: Commit and push updated stubs
         uses: stefanzweifel/git-auto-commit-action@v7
         with:
           commit_message: "chore: auto-update pyi stubs and py.typed"
-          file_pattern: "nnengine/_backend.pyi nnengine/py.typed"
+          file_pattern: "nnengine/_backend*.pyi nnengine/py.typed"
           
       - name: Upload stubs as artifact for wheel builders
         uses: actions/upload-artifact@v7
         with:
           name: py-stubs
           path: |
-            nnengine/_backend.pyi
+            nnengine/_backend*.pyi
             nnengine/py.typed
