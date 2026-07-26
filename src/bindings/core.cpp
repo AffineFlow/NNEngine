@@ -13,9 +13,12 @@
 #include "autograd/ops/MatMulOp.hpp"
 #include "autograd/ops/MulOp.hpp"
 #include "autograd/ops/PyOp.hpp"
+#include "autograd/ops/ReLUOp.hpp"
 #include "autograd/ops/ReductionOps.hpp"
 #include "autograd/ops/ScalarOps.hpp"
 #include "autograd/ops/SubOp.hpp"
+#include "autograd/ops/TransposeOp.hpp"
+#include "autograd/ops/UnaryOps.hpp"
 #include "core/DataLoader.hpp"
 #include "core/Random.hpp"
 
@@ -340,12 +343,11 @@ void bind_core_utils(py::module_& m) {
             return out;
           },
           py::arg("val"), py::return_value_policy::reference)
-      // ================= IN-PLACE OPS =================
       .def(
           "__iadd__",
           [](mlengine::autograd::Tensor& self,
              mlengine::autograd::Tensor& other) {
-            self.data += other.data;  // Tensor += Tensor is allowed
+            self.data += other.data;
             return self;
           },
           py::arg("other"), "In-place addition (detached from autograd).",
@@ -353,8 +355,7 @@ void bind_core_utils(py::module_& m) {
       .def(
           "__iadd__",
           [](mlengine::autograd::Tensor& self, float val) {
-            self.data = self.data +
-                        val;  // Tensor += Scalar is NOT allowed, must expand
+            self.data = self.data + val;
             return self;
           },
           py::arg("val"), py::return_value_policy::reference)
@@ -402,7 +403,94 @@ void bind_core_utils(py::module_& m) {
             self.grad.setConstant(1.0f);
             tape->backward();
           },
-          "Computes the gradient of current tensor w.r.t. graph leaves.");
+          "Computes the gradient of current tensor w.r.t. graph leaves.")
+      .def(
+          "exp",
+          [](mlengine::autograd::Tensor& self) {
+            auto* tape = mlengine::autograd::Tape::get_global();
+            bool req_grad = tape->record_ops_ && self.requires_grad;
+            auto* out = tape->alloc_tensor(self.shape, req_grad);
+
+            auto op =
+                std::make_shared<mlengine::autograd::ops::ExpOp>(&self, out);
+            op->forward();
+            tape->record_op(op);
+
+            return out;
+          },
+          "Element-wise exponential.", py::return_value_policy::reference)
+
+      .def(
+          "log",
+          [](mlengine::autograd::Tensor& self) {
+            auto* tape = mlengine::autograd::Tape::get_global();
+            bool req_grad = tape->record_ops_ && self.requires_grad;
+            auto* out = tape->alloc_tensor(self.shape, req_grad);
+
+            auto op =
+                std::make_shared<mlengine::autograd::ops::LogOp>(&self, out);
+            op->forward();
+            tape->record_op(op);
+
+            return out;
+          },
+          "Element-wise natural logarithm.", py::return_value_policy::reference)
+      .def_property_readonly(
+          "T",
+          [](mlengine::autograd::Tensor& self) {
+            if (self.shape.size() != 2) {
+              throw std::runtime_error(
+                  "T (transpose) currently only supports 2D tensors.");
+            }
+
+            auto* tape = mlengine::autograd::Tape::get_global();
+            bool req_grad = tape->record_ops_ && self.requires_grad;
+            auto* out =
+                tape->alloc_tensor({self.shape[1], self.shape[0]}, req_grad);
+
+            auto op = std::make_shared<mlengine::autograd::ops::TransposeOp>(
+                &self, out);
+            op->forward();
+            tape->record_op(op);
+
+            return out;
+          },
+          "Returns a view of the 2D tensor with its dimensions reversed.",
+          py::return_value_policy::reference)
+      .def(
+          "transpose",
+          [](mlengine::autograd::Tensor& self) {
+            if (self.shape.size() != 2) {
+              throw std::runtime_error(
+                  "transpose() currently only supports 2D tensors.");
+            }
+            auto* tape = mlengine::autograd::Tape::get_global();
+            bool req_grad = tape->record_ops_ && self.requires_grad;
+            auto* out =
+                tape->alloc_tensor({self.shape[1], self.shape[0]}, req_grad);
+            auto op = std::make_shared<mlengine::autograd::ops::TransposeOp>(
+                &self, out);
+            op->forward();
+            tape->record_op(op);
+            return out;
+          },
+          "Transposes a 2D tensor.", py::return_value_policy::reference)
+      .def(
+          "relu",
+          [](mlengine::autograd::Tensor& self) {
+            auto* tape = mlengine::autograd::Tape::get_global();
+            bool req_grad = tape->record_ops_ && self.requires_grad;
+            auto* out = tape->alloc_tensor(self.shape, req_grad);
+
+            auto op =
+                std::make_shared<mlengine::autograd::ops::ReLUOp>(&self, out);
+            op->forward();
+            tape->record_op(op);
+
+            return out;
+          },
+          "Element-wise rectified linear activation.",
+          py::return_value_policy::reference);
 
   py::implicitly_convertible<py::array_t<float>, mlengine::autograd::Tensor>();
 

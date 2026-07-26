@@ -44,7 +44,7 @@ def test_tensor_matmul():
     np.testing.assert_array_equal(np.array(b.grad), np_a.T)
 
 def test_scalar_arithmetic_and_broadcasting():
-    np_a = np.array([1.0, 2.0, 3.0], dtype=np.float32)
+    np_a = np.array([1.0, 2.0, 4.0], dtype=np.float32) # Adjusted 3.0 to 4.0 to avoid div-by-zero warning
     
     tape = nne.Tape(record_ops=True)
     with tape:
@@ -85,3 +85,67 @@ def test_inplace_updates():
     
     tensor *= 3.0
     np.testing.assert_array_equal(np.array(tensor), [6.0, 12.0])
+
+def test_unary_operations():
+    np_a = np.array([-1.0, 0.0, 1.0, 2.0], dtype=np.float32)
+    
+    # Test ReLU
+    tape = nne.Tape(record_ops=True)
+    with tape:
+        a = tape.push_tensor(nne.Tensor(np_a), requires_grad=True)
+        out_relu = a.relu()
+        out_relu.sum().backward()
+        
+    np.testing.assert_array_equal(np.array(out_relu), [0.0, 0.0, 1.0, 2.0])
+    np.testing.assert_array_equal(np.array(a.grad), [0.0, 0.0, 1.0, 1.0])
+    
+    # Test Exp
+    tape.reset()
+    with tape:
+        a = tape.push_tensor(nne.Tensor(np_a), requires_grad=True)
+        out_exp = a.exp()
+        out_exp.sum().backward()
+        
+    np.testing.assert_allclose(np.array(out_exp), np.exp(np_a), rtol=1e-5)
+    np.testing.assert_allclose(np.array(a.grad), np.exp(np_a), rtol=1e-5)
+    
+    # Test Log (use strictly positive values to avoid NaN/Inf)
+    np_pos = np.array([1.0, 2.0, 3.0, 4.0], dtype=np.float32)
+    tape.reset()
+    with tape:
+        a = tape.push_tensor(nne.Tensor(np_pos), requires_grad=True)
+        out_log = a.log()
+        out_log.sum().backward()
+        
+    np.testing.assert_allclose(np.array(out_log), np.log(np_pos), rtol=1e-5)
+    np.testing.assert_allclose(np.array(a.grad), 1.0 / np_pos, rtol=1e-5)
+
+def test_transpose():
+    np_a = np.array([[1.0, 2.0, 3.0], 
+                     [4.0, 5.0, 6.0]], dtype=np.float32) # 2x3
+                     
+    np_mask = np.array([[1.0, 2.0], 
+                        [3.0, 4.0], 
+                        [5.0, 6.0]], dtype=np.float32) # 3x2
+    
+    tape = nne.Tape(record_ops=True)
+    with tape:
+        a = tape.push_tensor(nne.Tensor(np_a), requires_grad=True)
+        mask = tape.push_tensor(nne.Tensor(np_mask), requires_grad=False)
+        
+        # Test .T property
+        a_t = a.T
+        
+        # Multiply by the mask to ensure gradients have unique values depending on position
+        out = a_t * mask
+        out.sum().backward()
+        
+    # Forward check
+    # Reshaping is necessary depending on how the Buffer Protocol exposes the multidimensional array to NumPy
+    np.testing.assert_array_equal(np.array(a_t).reshape(3, 2), np_a.T)
+    
+    # Gradient check:
+    # d(out) / d(a_t) = mask
+    # d(out) / d(a) = mask.T
+    expected_grad = np_mask.T
+    np.testing.assert_array_equal(np.array(a.grad).reshape(2, 3), expected_grad)
