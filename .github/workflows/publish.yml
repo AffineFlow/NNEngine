@@ -30,12 +30,10 @@ jobs:
           name: py-stubs
           path: nnengine/
 
-      # Enable ccache directory creation
       - name: Create ccache directory
         if: runner.os != 'Windows'
         run: mkdir -p .ccache
 
-      # Enable ccache restore/save
       - name: Cache ccache
         if: runner.os != 'Windows'
         uses: actions/cache@v6
@@ -64,7 +62,8 @@ jobs:
             CMAKE_CXX_COMPILER_LAUNCHER=ccache
             CCACHE_DIR=${{ github.workspace }}/.ccache
             CCACHE_COMPILERCHECK=content
-            MACOSX_DEPLOYMENT_TARGET="11.0"
+            SKBUILD_CMAKE_ARGS="-DCMAKE_OSX_ARCHITECTURES=arm64"
+            ARCHFLAGS="-arch arm64"
 
       - name: Fix cache permissions for Docker
         if: runner.os == 'Linux'
