@@ -9,6 +9,8 @@ jobs:
   # 1. Reuse the CI workflow to test and generate stubs!
   run_ci:
     uses: ./.github/workflows/ci.yml
+    permissions:
+      contents: write
 
   # 2. Build multi-OS wheels
   build_wheels:
