@@ -371,39 +371,99 @@ class Tensor:
     """
     A multi-dimensional array with autograd support.
     """
+    @typing.overload
     def __add__(self, other: Tensor) -> Tensor:
         """
         Element-wise addition of two tensors. Records to the active autograd tape.
         """
+    @typing.overload
+    def __add__(self, val: typing.SupportsFloat | typing.SupportsIndex) -> Tensor:
+        ...
     def __buffer__(self, flags):
         """
         Return a buffer object that exposes the underlying memory of the object.
         """
+    @typing.overload
+    def __iadd__(self, other: Tensor) -> Tensor:
+        """
+        In-place addition (detached from autograd).
+        """
+    @typing.overload
+    def __iadd__(self, val: typing.SupportsFloat | typing.SupportsIndex) -> Tensor:
+        ...
+    @typing.overload
+    def __imul__(self, other: Tensor) -> Tensor:
+        """
+        In-place multiplication (detached from autograd).
+        """
+    @typing.overload
+    def __imul__(self, val: typing.SupportsFloat | typing.SupportsIndex) -> Tensor:
+        ...
     def __init__(self, data: typing.Annotated[numpy.typing.ArrayLike, numpy.float32]) -> None:
         """
         Initialize a tensor from a NumPy array.
         """
+    @typing.overload
+    def __isub__(self, other: Tensor) -> Tensor:
+        """
+        In-place subtraction (detached from autograd).
+        """
+    @typing.overload
+    def __isub__(self, val: typing.SupportsFloat | typing.SupportsIndex) -> Tensor:
+        ...
     def __matmul__(self, other: Tensor) -> Tensor:
         """
         Matrix multiplication of two 2D tensors. Records to the active autograd tape.
         """
+    @typing.overload
     def __mul__(self, other: Tensor) -> Tensor:
         """
         Element-wise multiplication of two tensors. Records to the active autograd tape.
         """
+    @typing.overload
+    def __mul__(self, val: typing.SupportsFloat | typing.SupportsIndex) -> Tensor:
+        ...
+    def __radd__(self, val: typing.SupportsFloat | typing.SupportsIndex) -> Tensor:
+        ...
     def __release_buffer__(self, buffer):
         """
         Release the buffer object that exposes the underlying memory of the object.
         """
     def __repr__(self) -> str:
         ...
+    def __rmul__(self, val: typing.SupportsFloat | typing.SupportsIndex) -> Tensor:
+        ...
+    def __rsub__(self, val: typing.SupportsFloat | typing.SupportsIndex) -> Tensor:
+        ...
+    def __rtruediv__(self, val: typing.SupportsFloat | typing.SupportsIndex) -> Tensor:
+        ...
+    @typing.overload
     def __sub__(self, other: Tensor) -> Tensor:
         """
         Element-wise subtraction of two tensors. Records to the active autograd tape.
         """
+    @typing.overload
+    def __sub__(self, val: typing.SupportsFloat | typing.SupportsIndex) -> Tensor:
+        ...
+    @typing.overload
     def __truediv__(self, other: Tensor) -> Tensor:
         """
         Element-wise division of two tensors. Records to the active autograd tape.
+        """
+    @typing.overload
+    def __truediv__(self, val: typing.SupportsFloat | typing.SupportsIndex) -> Tensor:
+        ...
+    def backward(self) -> None:
+        """
+        Computes the gradient of current tensor w.r.t. graph leaves.
+        """
+    def mean(self) -> Tensor:
+        """
+        Mean of all elements. Records to the active autograd tape.
+        """
+    def sum(self) -> Tensor:
+        """
+        Sum of all elements. Records to the active autograd tape.
         """
     @property
     def data(self) -> numpy.typing.NDArray[numpy.float32]:
