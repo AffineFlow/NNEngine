@@ -1,4 +1,4 @@
-# NN Engine Core
+# NNEngine
 
 [![PyPI version](https://img.shields.io/pypi/v/nn-engine-core?logo=pypi&logoColor=white)](https://pypi.org/project/nn-engine-core/)
 [![Python](https://img.shields.io/pypi/pyversions/nn-engine-core?logo=python&logoColor=white)](https://pypi.org/project/nn-engine-core/)
@@ -22,97 +22,74 @@ Designed for rapid experimentation without the Python Global Interpreter Lock (G
 
 Install the released wheel from PyPI (macOS, Linux, and Windows supported):
 
-```bash
-pip install nn-engine-core
-```
+    pip install nn-engine-core
 
 Or install in editable/development mode from the repository (requires CMake 3.18+ and a C++17 compiler):
 
-```bash
-pip install -e .
-```
+    pip install -e .
 
 ## Quick Start: Building a CNN
 
-```python
-import numpy as np
-import nnengine as nn
+    import numpy as np
+    import nnengine as nne
 
-# 1. Prepare Data (float32 required)
-# 100 samples of 1-channel 8x8 images
-X_train = np.random.rand(100, 1 * 8 * 8).astype(np.float32)
-y_train = np.eye(10)[np.random.choice(10, 100)].astype(np.float32) # One-hot labels
+    X_train = np.random.rand(100, 1, 64, 64).astype(np.float32)
+    y_train = np.eye(40, dtype=np.float32)[np.random.choice(40, 100)]
 
-# 2. Define Network using PyTorch-like Syntax
-class MyCNN(nn.Module):
-    def __init__(self):
-        super().__init__()
-        # Conv2D: 1 in_channel, 16 out_channels, 8x8 input, 3x3 kernel, pad=1
-        self.conv1 = self.add_module("conv1", nn.Conv2dLayer(1, 16, 8, 8, kernel_size=3, pad=1))
-        self.relu = self.add_module("relu", nn.ReLULayer())
-        self.fc = self.add_module("fc", nn.DenseLayer(16 * 8 * 8, 10))
+    class NNEngineDeepCNN(nne.Module):
+        def __init__(self, in_h, in_w, num_classes):
+            super().__init__()
+            self.conv1 = nne.Conv2dLayer(1, 16, in_h, in_w, kernel_size=5, stride=2, pad=2)
+            self.act1 = nne.LeakyReLULayer(0.01)
+            out_h1, out_w1 = in_h // 2, in_w // 2
+            self.conv2 = nne.Conv2dLayer(16, 32, out_h1, out_w1, kernel_size=3, stride=2, pad=1)
+            self.act2 = nne.LeakyReLULayer(0.01)
+            out_h2, out_w2 = out_h1 // 2, out_w1 // 2
+            self.fc = nne.DenseLayer(32 * out_h2 * out_w2, num_classes)
 
-    def forward(self, tape, x):
-        x = self.conv1(tape, x)
-        x = self.relu(tape, x)
-        return self.fc(tape, x)
+        def forward(self, x):
+            x = self.act1(self.conv1(x))
+            x = self.act2(self.conv2(x))
+            return self.fc(x)
 
-model = MyCNN()
+    model = NNEngineDeepCNN(64, 64, 40)
+    optimizer = nne.Adam(learning_rate=0.001)
+    loss_fn = nne.SoftmaxCrossEntropyLoss()
+    trainer = nne.JITCompiler(model, optimizer, loss_fn)
 
-# 3. Compile & Train using C++ JIT
-optimizer = nn.Adam(learning_rate=0.005)
-loss_fn = nn.SoftmaxCrossEntropyLoss()
-trainer = nn.JITCompiler(model, optimizer, loss_fn)
-
-# Attach a native Learning Rate Scheduler
-scheduler = nn.StepLR(optimizer, step_size=20, gamma=0.5)
-trainer._cpp_engine.set_scheduler(scheduler)
-
-dataloader = nn.DataLoader(X_train, y_train, batch_size=32)
-
-# Executes entirely in C++ without the GIL!
-trainer.fit(dataloader, epochs=40, tol=1e-4)
-
-# 4. Save and Load C++ Binary Checkpoints
-model.save_weights("cnn_model.nne")
-```
+    dataloader = nne.DataLoader(X_train, y_train, batch_size=32, shuffle=True, drop_last=True)
+    trainer.fit(dataloader, epochs=40, verbose=False)
+    trainer.save_checkpoint("faces_model")
 
 ## Defining Custom Autograd Operations in Python
 
-You can easily extend the C++ engine by defining Custom Operations in Pure Python. The C++ `Tape` will safely map NumPy views to the Eigen memory and correctly reverse the graph!
+    import numpy as np
+    import nnengine as nne
 
-```python
-import numpy as np
-import nnengine as nn
+    class MulOp(nne.Op):
+        def __init__(self, a, b):
+            super().__init__()
+            self.a = a
+            self.b = b
 
-class MulOp(nn.Op):
-    def __init__(self, tape, a, b):
-        super().__init__()
-        self.a, self.b = a, b
-        # Let the C++ Arena allocate the flat memory
-        self.out = tape.alloc_tensor(a.data.shape[0], b.data.shape[1], True)
+        def forward(self):
+            self.out_data = self.a.data * self.b.data
 
-    def forward(self):
-        self.out.data = self.a.data * self.b.data 
+        def backward(self):
+            if self.a.requires_grad:
+                self.a.grad += self.out.grad * self.b.data
+            if self.b.requires_grad:
+                self.b.grad += self.out.grad * self.a.data
 
-    def backward(self):
-        # Read/Write directly into the C++ Backend via NumPy views!
-        if self.a.requires_grad:
-            self.a.grad += self.out.grad * self.b.data
-        if self.b.requires_grad:
-            self.b.grad += self.out.grad * self.a.data
-```
+## Testing & Validation Suite
 
-## Benchmark Results: NNEngine vs. PyTorch
+Execute the full validation and benchmark suite via:
 
-Because `NNEngine` handles the entire training graph, dataloading, and optimization steps in an isolated C++ environment, it bypasses the heavy Python dispatcher overhead that plagues traditional frameworks on CPU workloads. 
+    python examples/script.py
 
-Below is a direct CPU-to-CPU hardware comparison between **NNEngine (C++ JIT)** and **PyTorch (ATen)** utilizing an identical architecture, Adam optimizer, `StepLR` scheduler, and identical mini-batch iterations.
+### Latest Benchmark Results (Multi-Seed Selection)
 
-| Dataset | Network Type | NNEngine Acc. | PyTorch Acc. | CPU Speedup |
-|---|---|--:|--:|--:|
-| **Iris Flower** | MLP | **100.00%** | 100.00% | **~2199x Faster** |
-| **Digits** | Conv2D CNN | **98.06%** | 98.61% | **~112x Faster** |
-| **Olivetti Faces** | Conv2D CNN | **91.25%** | 87.50% | **~4.5x Faster** |
-
-*Note: For smaller datasets like Iris, the PyTorch Python loop and ATen dispatch latency completely dominate training time. NNEngine executes these loop cycles instantly via raw memory pointers.*
+| Benchmark Task | Scikit-Learn | PyTorch (ATen) | NNEngine (C++ JIT) | Speedup |
+|---|--:|--:|--:|--:|
+| **Deep Regression** | MSE: 0.2811<br>Time: 9.13s | MSE: 0.2720<br>Time: 18.49s | **MSE: 0.2675**<br>Time: **2.76s** | **6.70x** |
+| **Deep CNN** | *N/A* | Acc: 97.50%<br>Time: 5.87s | **Acc: 97.50%**<br>Time: **4.49s** | **1.31x** |

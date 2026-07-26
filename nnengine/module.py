@@ -1,6 +1,6 @@
-import nn_core
+from . import _backend
 
-class Module(nn_core.Module):
+class Module(_backend.Module):
     """Python base class for composing NNEngine layers.
 
     Subclasses automatically register child layers assigned to `self` 
@@ -23,7 +23,7 @@ class Module(nn_core.Module):
         Raises:
             AttributeError: If a user attempts to reassign an already registered layer.
         """
-        if isinstance(value, nn_core.Layer) or isinstance(value, nn_core.Module):
+        if isinstance(value, _backend.Layer) or isinstance(value, _backend.Module):
             if hasattr(self, name):
                 raise AttributeError(f"Layer '{name}' is already registered. Reassignment is not allowed.")
             self.register_module(name, value)

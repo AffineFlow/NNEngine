@@ -1,4 +1,4 @@
-import nn_core
+from . import _backend
 
 class JITCompiler:
     """High-level Python wrapper around the native JIT training graph.
@@ -17,7 +17,7 @@ class JITCompiler:
             loss_fn (nnengine.Loss): Native loss implementation.
             regularizer (nnengine.Regularizer, optional): Optional penalty term.
         """
-        self._cpp_engine = nn_core.JITGraph(model, optimizer, loss_fn, regularizer)
+        self._cpp_engine = _backend.JITGraph(model, optimizer, loss_fn, regularizer)
         self.is_compiled = False
         
     def fit(self, dataloader, epochs, val_dataloader=None, tol=1e-4, n_iter_no_change=10, verbose=True):

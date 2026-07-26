@@ -2,40 +2,52 @@ name: Build and Publish to PyPI
 
 on:
   release:
-    types:
-      - published
+    types: [published]
   workflow_dispatch:
 
 jobs:
+  # 1. Reuse the CI workflow to test and generate stubs!
+  run_ci:
+    uses: ./.github/workflows/ci.yml
+
+  # 2. Build multi-OS wheels
   build_wheels:
     name: Build wheels on ${{ matrix.os }}
+    needs: run_ci
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       
+      - name: Download generated stubs
+        uses: actions/download-artifact@v8
+        with:
+          name: py-stubs
+          path: nnengine/
+
       - name: Create ccache directory
         if: runner.os != 'Windows'
         run: mkdir -p .ccache
 
       - name: Cache ccache
         if: runner.os != 'Windows'
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: .ccache
           key: ccache-${{ matrix.os }}-${{ github.sha }}
           restore-keys: |
             ccache-${{ matrix.os }}-
 
-      - name: Build wheels
-        uses: pypa/cibuildwheel@v3.4.1
+      - name: Build and Test wheels
+        uses: pypa/cibuildwheel@v4.1.1
         env:
           CIBW_BEFORE_ALL_LINUX: yum install -y ccache
           CIBW_BEFORE_ALL_MACOS: brew install libomp ccache
           CIBW_BUILD_FRONTEND: pip
+          
           CIBW_ENVIRONMENT_LINUX: >
             PATH="/usr/lib64/ccache:/usr/lib/ccache:$PATH"
             CMAKE_CXX_COMPILER_LAUNCHER=ccache
@@ -52,23 +64,34 @@ jobs:
         if: runner.os == 'Linux'
         run: sudo chown -R $USER:$USER .ccache
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: cibw-wheels-${{ matrix.os }}
           path: ./wheelhouse/*.whl
 
+  # 3. Build Source Distribution (SDist)
   build_sdist:
     name: Build source distribution
+    needs: run_ci
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      
+      - name: Download generated stubs
+        uses: actions/download-artifact@v8
+        with:
+          name: py-stubs
+          path: nnengine/
+          
       - name: Build sdist
         run: pipx run build --sdist
-      - uses: actions/upload-artifact@v4
+        
+      - uses: actions/upload-artifact@v7
         with:
           name: cibw-sdist
           path: dist/*.tar.gz
 
+  # 4. Final Publish
   publish-to-pypi:
     name: Publish Python distribution to PyPI
     needs: [build_wheels, build_sdist]
@@ -80,7 +103,7 @@ jobs:
       id-token: write
     steps:
       - name: Download all the dists
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           pattern: cibw-*
           path: dist

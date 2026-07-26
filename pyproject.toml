@@ -1,16 +1,23 @@
 [build-system]
-requires = ["scikit-build-core", "pybind11"]
+# Pinned minimums ensure stable builds across all CI runners
+requires = ["scikit-build-core>=0.8.0", "pybind11>=2.12.0"]
 build-backend = "scikit_build_core.build"
 
 [project]
 name = "nn-engine-core"
-version = "0.1.5"
+version = "0.1.6"
 description = "A high-performance C++ parametric optimization backend for NNEngine"
 readme = "README.md"
-license = {text = "MIT"}
+license = { text = "MIT" }
 requires-python = ">=3.8"
+
+# 1. Add authorship so you get credit on the PyPI page!
+authors = [
+    { name = "Your Name", email = "your.email@example.com" }
+]
+
 dependencies = [
-    "numpy"
+    "numpy>=1.21.0"
 ]
 keywords = ["machine-learning", "neural-networks", "autograd", "c++", "eigen"]
 classifiers = [
@@ -25,11 +32,13 @@ classifiers = [
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
-    "Topic :: Scientific/Engineering :: Artificial Intelligence"
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Typing :: Typed"
 ]
 
 [project.urls]
 Homepage = "https://github.com/MLEngineProject/NNEngine"
+Tracker = "https://github.com/MLEngineProject/NNEngine/issues"
 
 [tool.scikit-build]
 cmake.version = ">=3.18"
@@ -38,4 +47,8 @@ build-dir = "build/{wheel_tag}"
 wheel.packages = ["nnengine"]
 
 [tool.cibuildwheel]
+# Skip 32-bit, musl linux, and Python 3.13 free-threading (for now)
 skip = "*-musllinux_* *-win32 *i686 cp*t-win*"
+
+test-requires = ["pytest", "numpy"]
+test-command = "pytest {project}/tests/python"
