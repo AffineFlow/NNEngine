@@ -6,11 +6,13 @@ on:
   workflow_dispatch:
 
 jobs:
+  # 1. Reuse the CI workflow to test and generate stubs!
   run_ci:
     uses: ./.github/workflows/ci.yml
     permissions:
       contents: write
 
+  # 2. Build multi-OS wheels
   build_wheels:
     name: Build wheels on ${{ matrix.os }}
     needs: run_ci
@@ -47,6 +49,7 @@ jobs:
           CIBW_BEFORE_ALL_LINUX: yum install -y ccache
           CIBW_BEFORE_ALL_MACOS: brew install libomp ccache
           CIBW_BUILD_FRONTEND: pip
+          CIBW_ARCHS_MACOS: arm64
           
           CIBW_ENVIRONMENT_LINUX: >
             PATH="/usr/lib64/ccache:/usr/lib/ccache:$PATH"
@@ -54,12 +57,13 @@ jobs:
             CCACHE_DIR=/project/.ccache
             CCACHE_COMPILERCHECK=content
             
-          # Look how clean this is now! No more Rosetta hacks.
           CIBW_ENVIRONMENT_MACOS: >
             CMAKE_C_COMPILER_LAUNCHER=ccache
             CMAKE_CXX_COMPILER_LAUNCHER=ccache
             CCACHE_DIR=${{ github.workspace }}/.ccache
             CCACHE_COMPILERCHECK=content
+            MACOSX_DEPLOYMENT_TARGET="11.0"
+            SKBUILD_CMAKE_ARGS="-DCMAKE_OSX_ARCHITECTURES=arm64"
 
       - name: Fix cache permissions for Docker
         if: runner.os == 'Linux'
@@ -70,6 +74,7 @@ jobs:
           name: cibw-wheels-${{ matrix.os }}
           path: ./wheelhouse/*.whl
 
+  # 3. Build Source Distribution (SDist)
   build_sdist:
     name: Build source distribution
     needs: run_ci
@@ -91,6 +96,7 @@ jobs:
           name: cibw-sdist
           path: dist/*.tar.gz
 
+  # 4. Final Publish
   publish-to-pypi:
     name: Publish Python distribution to PyPI
     needs: [build_wheels, build_sdist]
