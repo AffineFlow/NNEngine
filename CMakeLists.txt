@@ -51,9 +51,9 @@ else()
     
     FetchContent_Declare(
         eigen 
-        URL "https://gitlab.com/libeigen/eigen/-/archive/3.4.0/eigen-3.4.0.tar.gz" 
+        URL "https://gitlab.com/libeigen/eigen/-/archive/5.0.1/eigen-5.0.1.tar.gz" 
         SOURCE_SUBDIR ""
-        EXCLUDE_FROM_ALL TRUE
+        EXCLUDE_FROM_ALL
     )
     FetchContent_MakeAvailable(eigen)
 
@@ -70,12 +70,12 @@ else()
         set(BUILD_TESTING OFF CACHE BOOL "Disable OpenBLAS tests" FORCE)
         set(TARGET "GENERIC" CACHE STRING "Target CPU for OpenBLAS" FORCE)
 
-        set(OPENBLAS_URL "https://github.com/OpenMathLib/OpenBLAS/releases/download/v0.3.26/OpenBLAS-0.3.26.tar.gz")
+        set(OPENBLAS_URL "https://github.com/OpenMathLib/OpenBLAS/releases/download/v0.3.34/OpenBLAS-0.3.34.tar.gz")
 
         FetchContent_Declare(
             OpenBLAS
             URL "${OPENBLAS_URL}"
-            EXCLUDE_FROM_ALL TRUE
+            EXCLUDE_FROM_ALL
         )
         FetchContent_MakeAvailable(OpenBLAS)
     endif()
