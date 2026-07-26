@@ -46,7 +46,15 @@ else()
     include(FetchContent)
 
     # Fetch Eigen
-    FetchContent_Declare(eigen URL "https://gitlab.com/libeigen/eigen/-/archive/3.4.0/eigen-3.4.0.tar.gz" SOURCE_SUBDIR "")
+    set(EIGEN_BUILD_DOC OFF CACHE BOOL "" FORCE)
+    set(BUILD_TESTING OFF CACHE BOOL "" FORCE)
+    
+    FetchContent_Declare(
+        eigen 
+        URL "https://gitlab.com/libeigen/eigen/-/archive/3.4.0/eigen-3.4.0.tar.gz" 
+        SOURCE_SUBDIR ""
+        EXCLUDE_FROM_ALL TRUE
+    )
     FetchContent_MakeAvailable(eigen)
 
     # Fetch Pybind11
