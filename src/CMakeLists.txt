@@ -15,6 +15,8 @@ add_library(NNEngine STATIC
     autograd/ops/LeakyReLUOp.cpp
     autograd/ops/MatMulOp.cpp
     autograd/ops/ReLUOp.cpp
+    autograd/ops/ScalarOps.cpp
+    autograd/ops/ReductionOps.cpp
     layers/BatchNorm1dLayer.cpp
     layers/Conv2dLayer.cpp
     layers/DenseLayer.cpp
