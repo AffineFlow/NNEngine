@@ -50,6 +50,7 @@ jobs:
           CIBW_BEFORE_ALL_MACOS: brew install libomp ccache
           CIBW_BUILD_FRONTEND: pip
           CIBW_ARCHS_MACOS: arm64
+          CIBW_TEST_COMMAND: "python -c 'import nnengine as nne; print(nne._backend);'"
 
           CIBW_ENVIRONMENT_LINUX: >
             PATH="/usr/lib64/ccache:/usr/lib/ccache:$PATH"
