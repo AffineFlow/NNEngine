@@ -64,6 +64,7 @@ jobs:
             CCACHE_COMPILERCHECK=content
             SKBUILD_CMAKE_ARGS="-DCMAKE_OSX_ARCHITECTURES=arm64"
             ARCHFLAGS="-arch arm64"
+            MACOSX_DEPLOYMENT_TARGET="26.0"
 
       - name: Fix cache permissions for Docker
         if: runner.os == 'Linux'
