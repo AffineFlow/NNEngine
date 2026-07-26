@@ -51,6 +51,10 @@ jobs:
           CIBW_BUILD_FRONTEND: pip
           CIBW_ARCHS_MACOS: arm64
 
+          # Temporary: prints the actual cmake/clang invocation so we can see
+          # what -arch flag the compiler really receives. Remove once resolved.
+          CIBW_BUILD_VERBOSITY_MACOS: 1
+
           CIBW_ENVIRONMENT_LINUX: >
             PATH="/usr/lib64/ccache:/usr/lib/ccache:$PATH"
             CMAKE_CXX_COMPILER_LAUNCHER=ccache
@@ -67,12 +71,12 @@ jobs:
             ARCHFLAGS="-arch arm64"
             _PYTHON_HOST_PLATFORM="macosx-11.0-arm64"
 
-          # Temporary diagnostic: shows the real arch of the built .so before
-          # delocate runs. Remove once the arm64 build is confirmed stable.
+          # Temporary diagnostic: reads each .so straight out of the built wheel
+          # (no extraction, no nested shell) and reports its real architecture
+          # before delocate runs. Remove once the arm64 build is confirmed.
           CIBW_REPAIR_WHEEL_COMMAND_MACOS: >
-            bash -c "for f in $(unzip -Z1 {wheel} | grep '\.so$'); do
-              unzip -p {wheel} $f | file -; done &&
-            delocate-wheel --require-archs {delocate_archs} -w {dest_dir} -v {wheel}"
+            python -c "import zipfile,subprocess,sys; z=zipfile.ZipFile(sys.argv[1]); names=[n for n in z.namelist() if n.endswith('.so')]; print('SO_FILES:', names or 'NONE FOUND'); [print(n, '->', subprocess.run(['file','-'],input=z.read(n),capture_output=True).stdout.decode().strip()) for n in names]" {wheel} &&
+            delocate-wheel --require-archs {delocate_archs} -w {dest_dir} -v {wheel}
 
       - name: Fix cache permissions for Docker
         if: runner.os == 'Linux'
