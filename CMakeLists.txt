@@ -60,6 +60,7 @@ else()
         set(BUILD_WITHOUT_LAPACK 1 CACHE BOOL "We only need BLAS for Eigen" FORCE)
         set(BUILD_SHARED_LIBS OFF CACHE BOOL "Build static OpenBLAS" FORCE)
         set(BUILD_TESTING OFF CACHE BOOL "Disable OpenBLAS tests" FORCE)
+        set(TARGET "GENERIC" CACHE STRING "Target CPU for OpenBLAS" FORCE)
 
         FetchContent_Declare(OpenBLAS URL "https://github.com/OpenMathLib/OpenBLAS/releases/download/v0.3.26/OpenBLAS-0.3.26.tar.gz" EXCLUDE_FROM_ALL)
         FetchContent_MakeAvailable(OpenBLAS)
