@@ -65,7 +65,6 @@ class NNEngineDeepMLP(nne.Module):
 def run_regression_benchmark(seeds=[42, 1337, 2026]):
     print(f"\n{'-'*20} BENCHMARK: DEEP REGRESSION (CALIFORNIA HOUSING) {'-'*20}")
     
-    # Data Prep (independent of seed)
     X, y = fetch_california_housing(return_X_y=True)
     y = y.reshape(-1, 1)
     
@@ -82,7 +81,7 @@ def run_regression_benchmark(seeds=[42, 1337, 2026]):
     lr = 0.01
     weight_decay = 1e-4
 
-    # --- 1. Scikit-Learn (Multi-Seed Selection) ---
+    # --- 1. Scikit-Learn ---
     print("Evaluating Scikit-Learn MLPRegressor across seeds...")
     best_sk_mse = float("inf")
     best_sk_results = None
@@ -103,10 +102,9 @@ def run_regression_benchmark(seeds=[42, 1337, 2026]):
         if sk_mse < best_sk_mse:
             best_sk_mse = sk_mse
             best_sk_results = (sk_mse, sk_r2, sk_time)
-
     sk_mse, sk_r2, sk_time = best_sk_results
 
-    # --- 2. PyTorch (Multi-Seed Selection) ---
+    # --- 2. PyTorch ---
     print("Evaluating PyTorch (ATen) across seeds...")
     best_pt_mse = float("inf")
     best_pt_results = None
@@ -139,10 +137,9 @@ def run_regression_benchmark(seeds=[42, 1337, 2026]):
         if pt_mse < best_pt_mse:
             best_pt_mse = pt_mse
             best_pt_results = (pt_mse, pt_r2, pt_time)
-
     pt_mse, pt_r2, pt_time = best_pt_results
 
-    # --- 3. NNEngine (Multi-Seed Selection) ---
+    # --- 3. NNEngine JIT ---
     print("Evaluating NNEngine (JIT) across seeds...")
     best_nn_mse = float("inf")
     best_nn_results = None
@@ -168,15 +165,54 @@ def run_regression_benchmark(seeds=[42, 1337, 2026]):
         if nn_mse < best_nn_mse:
             best_nn_mse = nn_mse
             best_nn_results = (nn_mse, nn_r2, nn_time)
-
     nn_mse, nn_r2, nn_time = best_nn_results
+
+    # --- 4. NNEngine Eager (Now Fair!) ---
+    print("Evaluating NNEngine (Eager) across seeds...")
+    best_eag_mse = float("inf")
+    best_eag_results = None
+
+    for seed in seeds:
+        nne.set_seed(seed)
+        eag_model = NNEngineDeepMLP(X_train.shape[1])
+        eag_opt = nne.Adam(learning_rate=lr)
+        eag_opt.set_parameters(eag_model.parameters())
+        eag_loss = nne.MSELoss()
+        eag_reg = nne.L2Regularizer(l2=weight_decay)
+        
+        @nne.eager(optimizer=eag_opt, loss_fn=eag_loss, regularizer=eag_reg)
+        def train_step(mod, x):
+            return mod(x)
+            
+        eag_loader = nne.DataLoader(X_train_s, y_train, batch_size=batch_size, shuffle=True, drop_last=True)
+        
+        bx = nne.Tensor(np.zeros((batch_size, X_train.shape[1]), dtype=np.float32))
+        by = nne.Tensor(np.zeros((batch_size, 1), dtype=np.float32))
+
+        t0 = time.perf_counter()
+        eag_model.train(True)
+        for epoch in range(epochs):
+            eag_loader.reset()
+            while eag_loader.has_next():
+                eag_loader.next_batch(bx, by)
+                train_step(eag_model, bx, by)
+        eag_time = time.perf_counter() - t0
+        
+        eag_preds = np.array(eag_model.predict(X_test_s))
+        eag_mse = mean_squared_error(y_test, eag_preds)
+        eag_r2 = r2_score(y_test, eag_preds)
+
+        if eag_mse < best_eag_mse:
+            best_eag_mse = eag_mse
+            best_eag_results = (eag_mse, eag_r2, eag_time)
+    eag_mse, eag_r2, eag_time = best_eag_results
 
     # Results
     print("\n--- Regression Results (Best over Seeds) ---")
     print(f"Scikit-Learn | MSE: {sk_mse:.4f} | R2: {sk_r2:.4f} | Time: {sk_time:.4f}s")
     print(f"PyTorch      | MSE: {pt_mse:.4f} | R2: {pt_r2:.4f} | Time: {pt_time:.4f}s")
-    print(f"NNEngine     | MSE: {nn_mse:.4f} | R2: {nn_r2:.4f} | Time: {nn_time:.4f}s")
-    print(f"NNEngine vs PyTorch Speedup: {pt_time / nn_time:.2f}x")
+    print(f"NNEngine JIT | MSE: {nn_mse:.4f} | R2: {nn_r2:.4f} | Time: {nn_time:.4f}s")
+    print(f"NNEngine Eag | MSE: {eag_mse:.4f} | R2: {eag_r2:.4f} | Time: {eag_time:.4f}s")
 
 
 # ==========================================
@@ -186,13 +222,10 @@ class PyTorchDeepCNN(nn.Module):
     def __init__(self, in_h, in_w, num_classes):
         super().__init__()
         self.in_h, self.in_w = in_h, in_w
-        # Layer 1: 64x64 -> 32x32
         self.conv1 = nn.Conv2d(1, 16, kernel_size=5, stride=2, padding=2)
         self.act1 = nn.LeakyReLU(0.01) 
-        # Layer 2: 32x32 -> 16x16
         self.conv2 = nn.Conv2d(16, 32, kernel_size=3, stride=2, padding=1)
         self.act2 = nn.LeakyReLU(0.01) 
-        
         self.flatten = nn.Flatten()
         self.fc = nn.Linear(32 * (in_h // 4) * (in_w // 4), num_classes)
 
@@ -206,14 +239,11 @@ class PyTorchDeepCNN(nn.Module):
 class NNEngineDeepCNN(nne.Module):
     def __init__(self, in_h, in_w, num_classes):
         super().__init__()
-        # Layer 1: 64x64 -> 32x32
         self.conv1 = nne.Conv2dLayer(1, 16, in_h, in_w, kernel_size=5, stride=2, pad=2)
         self.act1 = nne.LeakyReLULayer(0.01) 
-        # Layer 2: 32x32 -> 16x16
         out_h1, out_w1 = in_h // 2, in_w // 2
         self.conv2 = nne.Conv2dLayer(16, 32, out_h1, out_w1, kernel_size=3, stride=2, pad=1)
         self.act2 = nne.LeakyReLULayer(0.01) 
-        
         out_h2, out_w2 = out_h1 // 2, out_w1 // 2
         self.fc = nne.DenseLayer(32 * out_h2 * out_w2, num_classes)
 
@@ -242,7 +272,7 @@ def run_classification_benchmark(seeds=[42, 1337, 2026]):
     batch_size = 32
     lr = 0.001
 
-    # --- 1. PyTorch (Multi-Seed Selection) ---
+    # --- 1. PyTorch ---
     print("Evaluating PyTorch (ATen) across seeds...")
     best_pt_acc = -1.0
     best_pt_results = None
@@ -274,10 +304,9 @@ def run_classification_benchmark(seeds=[42, 1337, 2026]):
         if pt_acc > best_pt_acc:
             best_pt_acc = pt_acc
             best_pt_results = (pt_acc, pt_time)
-
     pt_acc, pt_time = best_pt_results
 
-    # --- 2. NNEngine Training & Checkpointing (Multi-Seed Selection) ---
+    # --- 2. NNEngine JIT ---
     print("Evaluating NNEngine (JIT) across seeds...")
     best_nn_acc = -1.0
     best_nn_results = None
@@ -295,34 +324,57 @@ def run_classification_benchmark(seeds=[42, 1337, 2026]):
         trainer.fit(nne_loader, epochs=epochs, verbose=False)
         nn_time = time.perf_counter() - t0
         
-        # Test Checkpointing System on the selected best run
-        trainer.save_checkpoint("faces_model")
-        
-        loaded_model = NNEngineDeepCNN(img_h, img_w, num_classes)
-        _ = loaded_model.predict(X_test_cnn[:1]) 
-        
-        loaded_trainer = nne.JITCompiler(loaded_model, nne.Adam(), nne.SoftmaxCrossEntropyLoss())
-        loaded_trainer.load_checkpoint("faces_model")
-        
-        nn_preds = np.argmax(np.array(loaded_model.predict(X_test_cnn)), axis=1)
+        nn_preds = np.argmax(np.array(nn_model.predict(X_test_cnn)), axis=1)
         nn_acc = accuracy_score(y_test, nn_preds) * 100
-        
-        if os.path.exists("faces_model.weights.nne"):
-            os.remove("faces_model.weights.nne")
-        if os.path.exists("faces_model.opt.nne"):
-            os.remove("faces_model.opt.nne")
 
         if nn_acc > best_nn_acc:
             best_nn_acc = nn_acc
             best_nn_results = (nn_acc, nn_time)
-
     nn_acc, nn_time = best_nn_results
+
+    # --- 3. NNEngine Eager ---
+    print("Evaluating NNEngine (Eager) across seeds...")
+    best_eag_acc = -1.0
+    best_eag_results = None
+
+    for seed in seeds:
+        nne.set_seed(seed)
+        eag_model = NNEngineDeepCNN(img_h, img_w, num_classes)
+        eag_opt = nne.Adam(learning_rate=lr)
+        eag_opt.set_parameters(eag_model.parameters())
+        eag_loss = nne.SoftmaxCrossEntropyLoss()
+        
+        @nne.eager(optimizer=eag_opt, loss_fn=eag_loss)
+        def train_step(mod, x):
+            return mod(x)
+            
+        eag_loader = nne.DataLoader(X_train_cnn, y_train_onehot, batch_size=batch_size, shuffle=True, drop_last=True)
+        
+        bx = nne.Tensor(np.zeros((batch_size, 1, img_h, img_w), dtype=np.float32))
+        by = nne.Tensor(np.zeros((batch_size, num_classes), dtype=np.float32))
+
+        t0 = time.perf_counter()
+        eag_model.train(True)
+        for epoch in range(epochs):
+            eag_loader.reset()
+            while eag_loader.has_next():
+                eag_loader.next_batch(bx, by)
+                train_step(eag_model, bx, by)
+        eag_time = time.perf_counter() - t0
+        
+        eag_preds = np.argmax(np.array(eag_model.predict(X_test_cnn)), axis=1)
+        eag_acc = accuracy_score(y_test, eag_preds) * 100
+
+        if eag_acc > best_eag_acc:
+            best_eag_acc = eag_acc
+            best_eag_results = (eag_acc, eag_time)
+    eag_acc, eag_time = best_eag_results
 
     # Results
     print("\n--- Classification Results (Best over Seeds) ---")
-    print(f"PyTorch  | Acc: {pt_acc:.2f}% | Time: {pt_time:.4f}s")
-    print(f"NNEngine | Acc: {nn_acc:.2f}% | Time: {nn_time:.4f}s")
-    print(f"NNEngine vs PyTorch Speedup: {pt_time / nn_time:.2f}x")
+    print(f"PyTorch      | Acc: {pt_acc:.2f}% | Time: {pt_time:.4f}s")
+    print(f"NNEngine JIT | Acc: {nn_acc:.2f}% | Time: {nn_time:.4f}s")
+    print(f"NNEngine Eag | Acc: {eag_acc:.2f}% | Time: {eag_time:.4f}s")
 
 if __name__ == "__main__":
     print("Starting Comprehensive Multi-Seed NNEngine Validation Suite...")

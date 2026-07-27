@@ -1,7 +1,6 @@
 #include "layers/DenseLayer.hpp"
 
 #include <cmath>
-#include <memory>
 #include <random>
 
 #include "autograd/Tape.hpp"
@@ -37,16 +36,16 @@ autograd::Tensor* DenseLayer::forward(autograd::Tensor* input) {
       tape->record_ops_ && (input->requires_grad || weights_.requires_grad);
   auto* mm = tape->alloc_tensor(
       mlengine::Shape{input->shape[0], weights_.shape[1]}, req_grad_mm);
-  auto mm_op = std::make_shared<autograd::ops::MatMulOp>(input, &weights_, mm);
+  auto* mm_op = tape->allocate_op<mlengine::autograd::ops::MatMulOp>(
+      input, &weights_, mm);
   mm_op->forward();
-  tape->record_op(mm_op);
 
   bool req_grad_out =
       tape->record_ops_ && (mm->requires_grad || bias_.requires_grad);
   auto* out = tape->alloc_tensor(mm->shape, req_grad_out);
-  auto bias_op = std::make_shared<autograd::ops::AddBiasOp>(mm, &bias_, out);
+  auto* bias_op =
+      tape->allocate_op<mlengine::autograd::ops::AddBiasOp>(mm, &bias_, out);
   bias_op->forward();
-  tape->record_op(bias_op);
 
   return out;
 }
@@ -54,4 +53,5 @@ autograd::Tensor* DenseLayer::forward(autograd::Tensor* input) {
 std::vector<autograd::Tensor*> DenseLayer::parameters() {
   return {&weights_, &bias_};
 }
+
 }  // namespace mlengine::layers

@@ -8,6 +8,10 @@ Adam::Adam(float learning_rate) : Optimizer(learning_rate) {}
 
 void Adam::set_parameters(const std::vector<autograd::Tensor*>& params) {
   Optimizer::set_parameters(params);
+
+  // Only initialize if the momentum vectors don't exist yet
+  if (m_.size() == parameters_.size()) return;
+
   m_.clear();
   v_.clear();
   t_ = 0;

@@ -63,23 +63,20 @@ float JITGraph::trace_batch(DataLoader& dataloader) {
   float loss = loss_fn_->forward(predictions_, y_input_);
   loss_fn_->backward();
   tape_->backward();
+
   if (regularizer_) loss += regularizer_->apply(parameters_);
-  optimizer_->step();
+
+  optimizer_->zero_grad();
+
   return loss;
 }
 
 std::pair<float, size_t> JITGraph::fast_loop(DataLoader& dataloader) {
   float total_loss = 0.0f;
   size_t batch_count = 0;
-  autograd::Tensor X_batch(mlengine::Shape{0});
-  autograd::Tensor y_batch(mlengine::Shape{0});
 
   while (dataloader.has_next()) {
-    dataloader.next_batch(X_batch, y_batch);
-    std::copy(X_batch.data.data(), X_batch.data.data() + X_batch.data.size(),
-              X_input_->data.data());
-    std::copy(y_batch.data.data(), y_batch.data.data() + y_batch.data.size(),
-              y_input_->data.data());
+    dataloader.next_batch(*X_input_, *y_input_);
 
     optimizer_->zero_grad();
     tape_->zero_grads();
@@ -87,7 +84,9 @@ std::pair<float, size_t> JITGraph::fast_loop(DataLoader& dataloader) {
     float loss = loss_fn_->forward(predictions_, y_input_);
     loss_fn_->backward();
     tape_->replay_backward();
+
     if (regularizer_) loss += regularizer_->apply(parameters_);
+
     optimizer_->step();
     total_loss += loss;
     batch_count++;
@@ -99,21 +98,16 @@ float JITGraph::evaluate(DataLoader& dataloader) {
   model_->train(false);
   float total_loss = 0.0f;
   size_t batch_count = 0;
-  autograd::Tensor X_batch(mlengine::Shape{0});
-  autograd::Tensor y_batch(mlengine::Shape{0});
 
   while (dataloader.has_next()) {
-    dataloader.next_batch(X_batch, y_batch);
-    std::copy(X_batch.data.data(), X_batch.data.data() + X_batch.data.size(),
-              X_input_->data.data());
-    std::copy(y_batch.data.data(), y_batch.data.data() + y_batch.data.size(),
-              y_input_->data.data());
+    dataloader.next_batch(*X_input_, *y_input_);
 
     tape_->replay_forward();
     float loss = loss_fn_->forward(predictions_, y_input_);
     total_loss += loss;
     batch_count++;
   }
+
   model_->train(true);
   return total_loss / static_cast<float>(std::max(size_t(1), batch_count));
 }
@@ -166,17 +160,64 @@ void JITGraph::fast_fit(DataLoader& dataloader, DataLoader* val_dataloader,
 }
 
 void JITGraph::save_checkpoint(const std::string& base_filepath) {
-  if (auto* mod = dynamic_cast<core::Module*>(model_.get())) {
-    mod->save_weights(base_filepath + ".weights.nne");
+  std::ofstream out(base_filepath + ".weights.nne", std::ios::binary);
+  if (out) {
+    auto state_dict = model_->named_parameters();
+    size_t num_params = state_dict.size();
+    out.write(reinterpret_cast<const char*>(&num_params), sizeof(size_t));
+
+    for (const auto& [name, tensor] : state_dict) {
+      size_t name_len = name.size();
+      out.write(reinterpret_cast<const char*>(&name_len), sizeof(size_t));
+      out.write(name.c_str(), name_len);
+
+      size_t shape_size = tensor->shape.size();
+      out.write(reinterpret_cast<const char*>(&shape_size), sizeof(size_t));
+      for (auto dim : tensor->shape) {
+        out.write(reinterpret_cast<const char*>(&dim), sizeof(Eigen::Index));
+      }
+      out.write(reinterpret_cast<const char*>(tensor->data.data()),
+                tensor->data.size() * sizeof(float));
+    }
   }
+
   std::ofstream os(base_filepath + ".opt.nne", std::ios::binary);
   if (os) optimizer_->save_state(os);
 }
 
 void JITGraph::load_checkpoint(const std::string& base_filepath) {
-  if (auto* mod = dynamic_cast<core::Module*>(model_.get())) {
-    mod->load_weights(base_filepath + ".weights.nne");
+  std::ifstream in(base_filepath + ".weights.nne", std::ios::binary);
+  if (in) {
+    auto state_dict = model_->named_parameters();
+    size_t num_params;
+    in.read(reinterpret_cast<char*>(&num_params), sizeof(size_t));
+
+    for (size_t i = 0; i < num_params; ++i) {
+      size_t name_len;
+      in.read(reinterpret_cast<char*>(&name_len), sizeof(size_t));
+      std::string name(name_len, '\0');
+      in.read(&name[0], name_len);
+
+      size_t shape_size;
+      in.read(reinterpret_cast<char*>(&shape_size), sizeof(size_t));
+      std::vector<Eigen::Index> loaded_shape(shape_size);
+      Eigen::Index total_size = 1;
+      for (size_t j = 0; j < shape_size; ++j) {
+        in.read(reinterpret_cast<char*>(&loaded_shape[j]),
+                sizeof(Eigen::Index));
+        total_size *= loaded_shape[j];
+      }
+
+      auto it = state_dict.find(name);
+      if (it != state_dict.end() && it->second->shape == loaded_shape) {
+        in.read(reinterpret_cast<char*>(it->second->data.data()),
+                total_size * sizeof(float));
+      } else {
+        in.seekg(total_size * sizeof(float), std::ios::cur);
+      }
+    }
   }
+
   std::ifstream is(base_filepath + ".opt.nne", std::ios::binary);
   if (is) optimizer_->load_state(is);
 }

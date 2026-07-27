@@ -1,4 +1,5 @@
 #include <pybind11/pybind11.h>
+#include <pybind11/stl.h>
 
 #include <memory>
 
@@ -32,7 +33,9 @@ void bind_losses_and_regs(py::module_& m) {
 
   py::class_<Regularizer, std::shared_ptr<Regularizer>>(
       m, "Regularizer",
-      "Penalty term applied to trainable parameters during optimization.");
+      "Penalty term applied to trainable parameters during optimization.")
+      .def("apply", &Regularizer::apply, py::arg("parameters"),
+           "Accumulate a regularization penalty and any gradient adjustment.");
 
   py::class_<L2Regularizer, Regularizer, std::shared_ptr<L2Regularizer>>(
       m, "L2Regularizer", "L2 weight decay regularizer.")

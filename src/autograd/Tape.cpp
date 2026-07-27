@@ -18,7 +18,17 @@ Tape* Tape::get_global() {
   return t;
 }
 
-Tape::Tape(bool record_ops) : record_ops_(record_ops) { ops_.reserve(10000); }
+Tape::Tape(bool record_ops) : record_ops_(record_ops) {
+  execution_order_.reserve(10000);
+  arena_ops_.reserve(10000);
+  op_arena_.emplace_back(BLOCK_SIZE);
+}
+
+Tape::~Tape() {
+  for (Op* op : arena_ops_) {
+    op->~Op();
+  }
+}
 
 Tensor* Tape::alloc_tensor(const mlengine::Shape& shape, bool requires_grad) {
   bool req_grad_actual = record_ops_ && requires_grad;
@@ -43,15 +53,21 @@ Tensor* Tape::push_tensor(const Tensor& input_data, bool requires_grad) {
 }
 
 void Tape::record_op(std::shared_ptr<Op> op) {
-  if (record_ops_) ops_.push_back(op);
+  if (record_ops_) {
+    execution_order_.push_back(op.get());
+    external_ops_.push_back(op);
+  }
 }
 
 void Tape::replay_forward() {
-  for (auto& op : ops_) op->forward();
+  for (auto* op : execution_order_) op->forward();
 }
 
 void Tape::replay_backward() {
-  for (auto it = ops_.rbegin(); it != ops_.rend(); ++it) (*it)->backward();
+  for (auto it = execution_order_.rbegin(); it != execution_order_.rend();
+       ++it) {
+    (*it)->backward();
+  }
 }
 
 void Tape::zero_grads() {
@@ -61,7 +77,16 @@ void Tape::zero_grads() {
 void Tape::backward() { replay_backward(); }
 
 void Tape::reset() {
-  ops_.clear();
+  for (Op* op : arena_ops_) {
+    op->~Op();
+  }
+  arena_ops_.clear();
+
+  execution_order_.clear();
+  external_ops_.clear();
+
+  current_block_ = 0;
+  arena_offset_ = 0;
   tensor_idx_ = 0;
 }
 

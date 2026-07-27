@@ -1,7 +1,6 @@
 #include "layers/Conv2dLayer.hpp"
 
 #include <cmath>
-#include <memory>
 #include <random>
 
 #include "autograd/Tape.hpp"
@@ -9,6 +8,7 @@
 #include "core/Random.hpp"
 
 namespace mlengine::layers {
+
 Conv2dLayer::Conv2dLayer(int in_channels, int out_channels, int in_h, int in_w,
                          int kernel_size, int stride, int pad)
     : w_(mlengine::Shape{out_channels, in_channels * kernel_size * kernel_size},
@@ -50,18 +50,20 @@ autograd::Tensor* Conv2dLayer::forward(autograd::Tensor* input) {
       mlengine::Shape{input->shape[0], out_channels_ * out_h * out_w},
       req_grad);
 
-  auto op = std::make_shared<autograd::ops::Conv2dOp>(
+  auto* op = tape->allocate_op<mlengine::autograd::ops::Conv2dOp>(
       input, &w_, &bias_, out, in_channels_, out_channels_, in_h_, in_w_,
       kernel_size_, stride_, pad_);
   op->forward();
-  tape->record_op(op);
+
   return out;
 }
 
 std::vector<autograd::Tensor*> Conv2dLayer::parameters() {
   return {&w_, &bias_};
 }
+
 std::map<std::string, autograd::Tensor*> Conv2dLayer::named_parameters() {
   return {{"weight", &w_}, {"bias", &bias_}};
 }
+
 }  // namespace mlengine::layers

@@ -113,283 +113,441 @@ void bind_core_utils(py::module_& m) {
       .def(
           "__add__",
           [](mlengine::autograd::Tensor& self,
-             mlengine::autograd::Tensor& other) {
-            auto* tape = mlengine::autograd::Tape::get_global();
+             mlengine::autograd::Tensor& other) -> py::object {
+            auto* tape = mlengine::autograd::Tape::global_tape();
+            if (!tape) {
+              mlengine::autograd::Tensor out(self.shape, false);
+              {
+                py::gil_scoped_release release;
+                out.data = self.data + other.data;
+              }
+              return py::cast(out);
+            }
             bool req_grad = tape->record_ops_ &&
                             (self.requires_grad || other.requires_grad);
             auto* out = tape->alloc_tensor(self.shape, req_grad);
-            auto op = std::make_shared<mlengine::autograd::ops::AddOp>(
+            auto* op = tape->allocate_op<mlengine::autograd::ops::AddOp>(
                 &self, &other, out);
-            op->forward();
-            tape->record_op(op);
-            return out;
+            {
+              py::gil_scoped_release release;
+              op->forward();
+            }
+            return py::cast(out, py::return_value_policy::reference);
           },
-          py::arg("other"),
-          "Element-wise addition of two tensors. Records to the active "
-          "autograd tape.",
-          py::return_value_policy::reference)
-
+          py::arg("other"), "Element-wise addition of two tensors.")
       .def(
           "__sub__",
           [](mlengine::autograd::Tensor& self,
-             mlengine::autograd::Tensor& other) {
-            auto* tape = mlengine::autograd::Tape::get_global();
+             mlengine::autograd::Tensor& other) -> py::object {
+            auto* tape = mlengine::autograd::Tape::global_tape();
+            if (!tape) {
+              mlengine::autograd::Tensor out(self.shape, false);
+              {
+                py::gil_scoped_release release;
+                out.data = self.data - other.data;
+              }
+              return py::cast(out);
+            }
             bool req_grad = tape->record_ops_ &&
                             (self.requires_grad || other.requires_grad);
             auto* out = tape->alloc_tensor(self.shape, req_grad);
-            auto op = std::make_shared<mlengine::autograd::ops::SubOp>(
+            auto* op = tape->allocate_op<mlengine::autograd::ops::SubOp>(
                 &self, &other, out);
-            op->forward();
-            tape->record_op(op);
-            return out;
+            {
+              py::gil_scoped_release release;
+              op->forward();
+            }
+            return py::cast(out, py::return_value_policy::reference);
           },
-          py::arg("other"),
-          "Element-wise subtraction of two tensors. Records to the active "
-          "autograd tape.",
-          py::return_value_policy::reference)
-
+          py::arg("other"), "Element-wise subtraction of two tensors.")
       .def(
           "__mul__",
           [](mlengine::autograd::Tensor& self,
-             mlengine::autograd::Tensor& other) {
-            auto* tape = mlengine::autograd::Tape::get_global();
+             mlengine::autograd::Tensor& other) -> py::object {
+            auto* tape = mlengine::autograd::Tape::global_tape();
+            if (!tape) {
+              mlengine::autograd::Tensor out(self.shape, false);
+              {
+                py::gil_scoped_release release;
+                out.data = self.data * other.data;
+              }
+              return py::cast(out);
+            }
             bool req_grad = tape->record_ops_ &&
                             (self.requires_grad || other.requires_grad);
             auto* out = tape->alloc_tensor(self.shape, req_grad);
-            auto op = std::make_shared<mlengine::autograd::ops::MulOp>(
+            auto* op = tape->allocate_op<mlengine::autograd::ops::MulOp>(
                 &self, &other, out);
-            op->forward();
-            tape->record_op(op);
-            return out;
+            {
+              py::gil_scoped_release release;
+              op->forward();
+            }
+            return py::cast(out, py::return_value_policy::reference);
           },
-          py::arg("other"),
-          "Element-wise multiplication of two tensors. Records to the active "
-          "autograd tape.",
-          py::return_value_policy::reference)
-
+          py::arg("other"), "Element-wise multiplication of two tensors.")
       .def(
           "__truediv__",
           [](mlengine::autograd::Tensor& self,
-             mlengine::autograd::Tensor& other) {
-            auto* tape = mlengine::autograd::Tape::get_global();
+             mlengine::autograd::Tensor& other) -> py::object {
+            auto* tape = mlengine::autograd::Tape::global_tape();
+            if (!tape) {
+              mlengine::autograd::Tensor out(self.shape, false);
+              {
+                py::gil_scoped_release release;
+                out.data = self.data / other.data;
+              }
+              return py::cast(out);
+            }
             bool req_grad = tape->record_ops_ &&
                             (self.requires_grad || other.requires_grad);
             auto* out = tape->alloc_tensor(self.shape, req_grad);
-            auto op = std::make_shared<mlengine::autograd::ops::DivOp>(
+            auto* op = tape->allocate_op<mlengine::autograd::ops::DivOp>(
                 &self, &other, out);
-            op->forward();
-            tape->record_op(op);
-            return out;
+            {
+              py::gil_scoped_release release;
+              op->forward();
+            }
+            return py::cast(out, py::return_value_policy::reference);
           },
-          py::arg("other"),
-          "Element-wise division of two tensors. Records to the active "
-          "autograd tape.",
-          py::return_value_policy::reference)
-
+          py::arg("other"), "Element-wise division of two tensors.")
       .def(
           "__matmul__",
           [](mlengine::autograd::Tensor& self,
-             mlengine::autograd::Tensor& other) {
-            auto* tape = mlengine::autograd::Tape::get_global();
+             mlengine::autograd::Tensor& other) -> py::object {
             if (self.shape.size() != 2 || other.shape.size() != 2)
               throw std::invalid_argument("MatMul requires 2D tensors");
+            auto* tape = mlengine::autograd::Tape::global_tape();
+            if (!tape) {
+              mlengine::autograd::Tensor out({self.shape[0], other.shape[1]},
+                                             false);
+              {
+                py::gil_scoped_release release;
+                Eigen::Map<Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic,
+                                         Eigen::RowMajor>>
+                    A_mat(self.data.data(), self.shape[0], self.shape[1]);
+                Eigen::Map<Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic,
+                                         Eigen::RowMajor>>
+                    B_mat(other.data.data(), other.shape[0], other.shape[1]);
+                Eigen::Map<Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic,
+                                         Eigen::RowMajor>>
+                    Out_mat(out.data.data(), out.shape[0], out.shape[1]);
+                Out_mat.noalias() = A_mat * B_mat;
+              }
+              return py::cast(out);
+            }
             bool req_grad = tape->record_ops_ &&
                             (self.requires_grad || other.requires_grad);
             auto* out =
                 tape->alloc_tensor({self.shape[0], other.shape[1]}, req_grad);
-            auto op = std::make_shared<mlengine::autograd::ops::MatMulOp>(
+            auto* op = tape->allocate_op<mlengine::autograd::ops::MatMulOp>(
                 &self, &other, out);
-            op->forward();
-            tape->record_op(op);
-            return out;
+            {
+              py::gil_scoped_release release;
+              op->forward();
+            }
+            return py::cast(out, py::return_value_policy::reference);
           },
-          py::arg("other"),
-          "Matrix multiplication of two 2D tensors. Records to the active "
-          "autograd tape.",
-          py::return_value_policy::reference)
+          py::arg("other"), "Matrix multiplication of two 2D tensors.")
       .def(
           "sum",
-          [](mlengine::autograd::Tensor& self) {
-            auto* tape = mlengine::autograd::Tape::get_global();
+          [](mlengine::autograd::Tensor& self) -> py::object {
+            auto* tape = mlengine::autograd::Tape::global_tape();
+            if (!tape) {
+              mlengine::autograd::Tensor out({1}, false);
+              {
+                py::gil_scoped_release release;
+                Eigen::Map<Eigen::ArrayXf> a_arr(self.data.data(),
+                                                 self.data.size());
+                out.data.data()[0] = a_arr.sum();
+              }
+              return py::cast(out);
+            }
             bool req_grad = tape->record_ops_ && self.requires_grad;
             auto* out = tape->alloc_tensor({1}, req_grad);
-            auto op =
-                std::make_shared<mlengine::autograd::ops::SumOp>(&self, out);
-            op->forward();
-            tape->record_op(op);
-            return out;
+            auto* op =
+                tape->allocate_op<mlengine::autograd::ops::SumOp>(&self, out);
+            {
+              py::gil_scoped_release release;
+              op->forward();
+            }
+            return py::cast(out, py::return_value_policy::reference);
           },
-          "Sum of all elements. Records to the active autograd tape.",
-          py::return_value_policy::reference)
-
+          "Sum of all elements.")
       .def(
           "mean",
-          [](mlengine::autograd::Tensor& self) {
-            auto* tape = mlengine::autograd::Tape::get_global();
+          [](mlengine::autograd::Tensor& self) -> py::object {
+            auto* tape = mlengine::autograd::Tape::global_tape();
+            if (!tape) {
+              mlengine::autograd::Tensor out({1}, false);
+              {
+                py::gil_scoped_release release;
+                Eigen::Map<Eigen::ArrayXf> a_arr(self.data.data(),
+                                                 self.data.size());
+                out.data.data()[0] = a_arr.mean();
+              }
+              return py::cast(out);
+            }
             bool req_grad = tape->record_ops_ && self.requires_grad;
             auto* out = tape->alloc_tensor({1}, req_grad);
-            auto op =
-                std::make_shared<mlengine::autograd::ops::MeanOp>(&self, out);
-            op->forward();
-            tape->record_op(op);
-            return out;
+            auto* op =
+                tape->allocate_op<mlengine::autograd::ops::MeanOp>(&self, out);
+            {
+              py::gil_scoped_release release;
+              op->forward();
+            }
+            return py::cast(out, py::return_value_policy::reference);
           },
-          "Mean of all elements. Records to the active autograd tape.",
-          py::return_value_policy::reference)
+          "Mean of all elements.")
       .def(
           "__add__",
-          [](mlengine::autograd::Tensor& self, float val) {
-            auto* tape = mlengine::autograd::Tape::get_global();
+          [](mlengine::autograd::Tensor& self, float val) -> py::object {
+            auto* tape = mlengine::autograd::Tape::global_tape();
+            if (!tape) {
+              mlengine::autograd::Tensor out(self.shape, false);
+              {
+                py::gil_scoped_release release;
+                out.data = self.data + val;
+              }
+              return py::cast(out);
+            }
             bool req_grad = tape->record_ops_ && self.requires_grad;
             auto* out = tape->alloc_tensor(self.shape, req_grad);
-            auto op = std::make_shared<mlengine::autograd::ops::AddScalarOp>(
+            auto* op = tape->allocate_op<mlengine::autograd::ops::AddScalarOp>(
                 &self, val, out);
-            op->forward();
-            tape->record_op(op);
-            return out;
+            {
+              py::gil_scoped_release release;
+              op->forward();
+            }
+            return py::cast(out, py::return_value_policy::reference);
           },
-          py::arg("val"), py::return_value_policy::reference)
+          py::arg("val"))
       .def(
           "__radd__",
-          [](mlengine::autograd::Tensor& self, float val) {
-            auto* tape = mlengine::autograd::Tape::get_global();
+          [](mlengine::autograd::Tensor& self, float val) -> py::object {
+            auto* tape = mlengine::autograd::Tape::global_tape();
+            if (!tape) {
+              mlengine::autograd::Tensor out(self.shape, false);
+              {
+                py::gil_scoped_release release;
+                out.data = self.data + val;
+              }
+              return py::cast(out);
+            }
             bool req_grad = tape->record_ops_ && self.requires_grad;
             auto* out = tape->alloc_tensor(self.shape, req_grad);
-            auto op = std::make_shared<mlengine::autograd::ops::AddScalarOp>(
-                &self, val, out);  // Addition is commutative
-            op->forward();
-            tape->record_op(op);
-            return out;
+            auto* op = tape->allocate_op<mlengine::autograd::ops::AddScalarOp>(
+                &self, val, out);
+            {
+              py::gil_scoped_release release;
+              op->forward();
+            }
+            return py::cast(out, py::return_value_policy::reference);
           },
-          py::arg("val"), py::return_value_policy::reference)
-
+          py::arg("val"))
       .def(
           "__sub__",
-          [](mlengine::autograd::Tensor& self, float val) {
-            auto* tape = mlengine::autograd::Tape::get_global();
+          [](mlengine::autograd::Tensor& self, float val) -> py::object {
+            auto* tape = mlengine::autograd::Tape::global_tape();
+            if (!tape) {
+              mlengine::autograd::Tensor out(self.shape, false);
+              {
+                py::gil_scoped_release release;
+                out.data = self.data - val;
+              }
+              return py::cast(out);
+            }
             bool req_grad = tape->record_ops_ && self.requires_grad;
             auto* out = tape->alloc_tensor(self.shape, req_grad);
-            auto op = std::make_shared<mlengine::autograd::ops::SubScalarOp>(
+            auto* op = tape->allocate_op<mlengine::autograd::ops::SubScalarOp>(
                 &self, val, out);
-            op->forward();
-            tape->record_op(op);
-            return out;
+            {
+              py::gil_scoped_release release;
+              op->forward();
+            }
+            return py::cast(out, py::return_value_policy::reference);
           },
-          py::arg("val"), py::return_value_policy::reference)
+          py::arg("val"))
       .def(
           "__rsub__",
-          [](mlengine::autograd::Tensor& self, float val) {
-            auto* tape = mlengine::autograd::Tape::get_global();
+          [](mlengine::autograd::Tensor& self, float val) -> py::object {
+            auto* tape = mlengine::autograd::Tape::global_tape();
+            if (!tape) {
+              mlengine::autograd::Tensor out(self.shape, false);
+              {
+                py::gil_scoped_release release;
+                out.data = val - self.data;
+              }
+              return py::cast(out);
+            }
             bool req_grad = tape->record_ops_ && self.requires_grad;
             auto* out = tape->alloc_tensor(self.shape, req_grad);
-            auto op = std::make_shared<mlengine::autograd::ops::RSubScalarOp>(
+            auto* op = tape->allocate_op<mlengine::autograd::ops::RSubScalarOp>(
                 &self, val, out);
-            op->forward();
-            tape->record_op(op);
-            return out;
+            {
+              py::gil_scoped_release release;
+              op->forward();
+            }
+            return py::cast(out, py::return_value_policy::reference);
           },
-          py::arg("val"), py::return_value_policy::reference)
-
+          py::arg("val"))
       .def(
           "__mul__",
-          [](mlengine::autograd::Tensor& self, float val) {
-            auto* tape = mlengine::autograd::Tape::get_global();
+          [](mlengine::autograd::Tensor& self, float val) -> py::object {
+            auto* tape = mlengine::autograd::Tape::global_tape();
+            if (!tape) {
+              mlengine::autograd::Tensor out(self.shape, false);
+              {
+                py::gil_scoped_release release;
+                out.data = self.data * val;
+              }
+              return py::cast(out);
+            }
             bool req_grad = tape->record_ops_ && self.requires_grad;
             auto* out = tape->alloc_tensor(self.shape, req_grad);
-            auto op = std::make_shared<mlengine::autograd::ops::MulScalarOp>(
+            auto* op = tape->allocate_op<mlengine::autograd::ops::MulScalarOp>(
                 &self, val, out);
-            op->forward();
-            tape->record_op(op);
-            return out;
+            {
+              py::gil_scoped_release release;
+              op->forward();
+            }
+            return py::cast(out, py::return_value_policy::reference);
           },
-          py::arg("val"), py::return_value_policy::reference)
+          py::arg("val"))
       .def(
           "__rmul__",
-          [](mlengine::autograd::Tensor& self, float val) {
-            auto* tape = mlengine::autograd::Tape::get_global();
+          [](mlengine::autograd::Tensor& self, float val) -> py::object {
+            auto* tape = mlengine::autograd::Tape::global_tape();
+            if (!tape) {
+              mlengine::autograd::Tensor out(self.shape, false);
+              {
+                py::gil_scoped_release release;
+                out.data = self.data * val;
+              }
+              return py::cast(out);
+            }
             bool req_grad = tape->record_ops_ && self.requires_grad;
             auto* out = tape->alloc_tensor(self.shape, req_grad);
-            auto op = std::make_shared<mlengine::autograd::ops::MulScalarOp>(
-                &self, val, out);  // Multiplication is commutative
-            op->forward();
-            tape->record_op(op);
-            return out;
+            auto* op = tape->allocate_op<mlengine::autograd::ops::MulScalarOp>(
+                &self, val, out);
+            {
+              py::gil_scoped_release release;
+              op->forward();
+            }
+            return py::cast(out, py::return_value_policy::reference);
           },
-          py::arg("val"), py::return_value_policy::reference)
-
+          py::arg("val"))
       .def(
           "__truediv__",
-          [](mlengine::autograd::Tensor& self, float val) {
-            auto* tape = mlengine::autograd::Tape::get_global();
+          [](mlengine::autograd::Tensor& self, float val) -> py::object {
+            auto* tape = mlengine::autograd::Tape::global_tape();
+            if (!tape) {
+              mlengine::autograd::Tensor out(self.shape, false);
+              {
+                py::gil_scoped_release release;
+                out.data = self.data / val;
+              }
+              return py::cast(out);
+            }
             bool req_grad = tape->record_ops_ && self.requires_grad;
             auto* out = tape->alloc_tensor(self.shape, req_grad);
-            auto op = std::make_shared<mlengine::autograd::ops::DivScalarOp>(
+            auto* op = tape->allocate_op<mlengine::autograd::ops::DivScalarOp>(
                 &self, val, out);
-            op->forward();
-            tape->record_op(op);
-            return out;
+            {
+              py::gil_scoped_release release;
+              op->forward();
+            }
+            return py::cast(out, py::return_value_policy::reference);
           },
-          py::arg("val"), py::return_value_policy::reference)
+          py::arg("val"))
       .def(
           "__rtruediv__",
-          [](mlengine::autograd::Tensor& self, float val) {
-            auto* tape = mlengine::autograd::Tape::get_global();
+          [](mlengine::autograd::Tensor& self, float val) -> py::object {
+            auto* tape = mlengine::autograd::Tape::global_tape();
+            if (!tape) {
+              mlengine::autograd::Tensor out(self.shape, false);
+              {
+                py::gil_scoped_release release;
+                out.data = val / self.data;
+              }
+              return py::cast(out);
+            }
             bool req_grad = tape->record_ops_ && self.requires_grad;
             auto* out = tape->alloc_tensor(self.shape, req_grad);
-            auto op = std::make_shared<mlengine::autograd::ops::RDivScalarOp>(
+            auto* op = tape->allocate_op<mlengine::autograd::ops::RDivScalarOp>(
                 &self, val, out);
-            op->forward();
-            tape->record_op(op);
-            return out;
+            {
+              py::gil_scoped_release release;
+              op->forward();
+            }
+            return py::cast(out, py::return_value_policy::reference);
           },
-          py::arg("val"), py::return_value_policy::reference)
+          py::arg("val"))
       .def(
           "__iadd__",
           [](mlengine::autograd::Tensor& self,
-             mlengine::autograd::Tensor& other) {
-            self.data += other.data;
+             mlengine::autograd::Tensor& other) -> mlengine::autograd::Tensor& {
+            {
+              py::gil_scoped_release release;
+              self.data += other.data;
+            }
             return self;
           },
           py::arg("other"), "In-place addition (detached from autograd).",
           py::return_value_policy::reference)
       .def(
           "__iadd__",
-          [](mlengine::autograd::Tensor& self, float val) {
-            self.data = self.data + val;
+          [](mlengine::autograd::Tensor& self,
+             float val) -> mlengine::autograd::Tensor& {
+            {
+              py::gil_scoped_release release;
+              self.data = self.data + val;
+            }
             return self;
           },
           py::arg("val"), py::return_value_policy::reference)
-
       .def(
           "__isub__",
           [](mlengine::autograd::Tensor& self,
-             mlengine::autograd::Tensor& other) {
-            self.data -= other.data;
+             mlengine::autograd::Tensor& other) -> mlengine::autograd::Tensor& {
+            {
+              py::gil_scoped_release release;
+              self.data -= other.data;
+            }
             return self;
           },
           py::arg("other"), "In-place subtraction (detached from autograd).",
           py::return_value_policy::reference)
       .def(
           "__isub__",
-          [](mlengine::autograd::Tensor& self, float val) {
-            self.data = self.data - val;
+          [](mlengine::autograd::Tensor& self,
+             float val) -> mlengine::autograd::Tensor& {
+            {
+              py::gil_scoped_release release;
+              self.data = self.data - val;
+            }
             return self;
           },
           py::arg("val"), py::return_value_policy::reference)
-
       .def(
           "__imul__",
           [](mlengine::autograd::Tensor& self,
-             mlengine::autograd::Tensor& other) {
-            self.data *= other.data;
+             mlengine::autograd::Tensor& other) -> mlengine::autograd::Tensor& {
+            {
+              py::gil_scoped_release release;
+              self.data *= other.data;
+            }
             return self;
           },
           py::arg("other"), "In-place multiplication (detached from autograd).",
           py::return_value_policy::reference)
       .def(
           "__imul__",
-          [](mlengine::autograd::Tensor& self, float val) {
-            self.data = self.data * val;
+          [](mlengine::autograd::Tensor& self,
+             float val) -> mlengine::autograd::Tensor& {
+            {
+              py::gil_scoped_release release;
+              self.data = self.data * val;
+            }
             return self;
           },
           py::arg("val"), py::return_value_policy::reference)
@@ -403,94 +561,147 @@ void bind_core_utils(py::module_& m) {
             self.grad.setConstant(1.0f);
             tape->backward();
           },
-          "Computes the gradient of current tensor w.r.t. graph leaves.")
+          "Computes the gradient of current tensor w.r.t. graph leaves.",
+          py::call_guard<py::gil_scoped_release>())
       .def(
           "exp",
-          [](mlengine::autograd::Tensor& self) {
-            auto* tape = mlengine::autograd::Tape::get_global();
+          [](mlengine::autograd::Tensor& self) -> py::object {
+            auto* tape = mlengine::autograd::Tape::global_tape();
+            if (!tape) {
+              mlengine::autograd::Tensor out(self.shape, false);
+              {
+                py::gil_scoped_release release;
+                out.data = self.data.exp();
+              }
+              return py::cast(out);
+            }
             bool req_grad = tape->record_ops_ && self.requires_grad;
             auto* out = tape->alloc_tensor(self.shape, req_grad);
-
-            auto op =
-                std::make_shared<mlengine::autograd::ops::ExpOp>(&self, out);
-            op->forward();
-            tape->record_op(op);
-
-            return out;
+            auto* op =
+                tape->allocate_op<mlengine::autograd::ops::ExpOp>(&self, out);
+            {
+              py::gil_scoped_release release;
+              op->forward();
+            }
+            return py::cast(out, py::return_value_policy::reference);
           },
-          "Element-wise exponential.", py::return_value_policy::reference)
-
+          "Element-wise exponential.")
       .def(
           "log",
-          [](mlengine::autograd::Tensor& self) {
-            auto* tape = mlengine::autograd::Tape::get_global();
+          [](mlengine::autograd::Tensor& self) -> py::object {
+            auto* tape = mlengine::autograd::Tape::global_tape();
+            if (!tape) {
+              mlengine::autograd::Tensor out(self.shape, false);
+              {
+                py::gil_scoped_release release;
+                out.data = self.data.log();
+              }
+              return py::cast(out);
+            }
             bool req_grad = tape->record_ops_ && self.requires_grad;
             auto* out = tape->alloc_tensor(self.shape, req_grad);
-
-            auto op =
-                std::make_shared<mlengine::autograd::ops::LogOp>(&self, out);
-            op->forward();
-            tape->record_op(op);
-
-            return out;
+            auto* op =
+                tape->allocate_op<mlengine::autograd::ops::LogOp>(&self, out);
+            {
+              py::gil_scoped_release release;
+              op->forward();
+            }
+            return py::cast(out, py::return_value_policy::reference);
           },
-          "Element-wise natural logarithm.", py::return_value_policy::reference)
+          "Element-wise natural logarithm.")
       .def_property_readonly(
           "T",
-          [](mlengine::autograd::Tensor& self) {
+          [](mlengine::autograd::Tensor& self) -> py::object {
             if (self.shape.size() != 2) {
               throw std::runtime_error(
                   "T (transpose) currently only supports 2D tensors.");
             }
-
-            auto* tape = mlengine::autograd::Tape::get_global();
+            auto* tape = mlengine::autograd::Tape::global_tape();
+            if (!tape) {
+              mlengine::autograd::Tensor out({self.shape[1], self.shape[0]},
+                                             false);
+              {
+                py::gil_scoped_release release;
+                Eigen::Map<Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic,
+                                         Eigen::RowMajor>>
+                    a_mat(self.data.data(), self.shape[0], self.shape[1]);
+                Eigen::Map<Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic,
+                                         Eigen::RowMajor>>
+                    out_mat(out.data.data(), out.shape[0], out.shape[1]);
+                out_mat = a_mat.transpose();
+              }
+              return py::cast(out);
+            }
             bool req_grad = tape->record_ops_ && self.requires_grad;
             auto* out =
                 tape->alloc_tensor({self.shape[1], self.shape[0]}, req_grad);
-
-            auto op = std::make_shared<mlengine::autograd::ops::TransposeOp>(
+            auto* op = tape->allocate_op<mlengine::autograd::ops::TransposeOp>(
                 &self, out);
-            op->forward();
-            tape->record_op(op);
-
-            return out;
+            {
+              py::gil_scoped_release release;
+              op->forward();
+            }
+            return py::cast(out, py::return_value_policy::reference);
           },
-          "Returns a view of the 2D tensor with its dimensions reversed.",
-          py::return_value_policy::reference)
+          "Returns a view of the 2D tensor with its dimensions reversed.")
       .def(
           "transpose",
-          [](mlengine::autograd::Tensor& self) {
+          [](mlengine::autograd::Tensor& self) -> py::object {
             if (self.shape.size() != 2) {
               throw std::runtime_error(
                   "transpose() currently only supports 2D tensors.");
             }
-            auto* tape = mlengine::autograd::Tape::get_global();
+            auto* tape = mlengine::autograd::Tape::global_tape();
+            if (!tape) {
+              mlengine::autograd::Tensor out({self.shape[1], self.shape[0]},
+                                             false);
+              {
+                py::gil_scoped_release release;
+                Eigen::Map<Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic,
+                                         Eigen::RowMajor>>
+                    a_mat(self.data.data(), self.shape[0], self.shape[1]);
+                Eigen::Map<Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic,
+                                         Eigen::RowMajor>>
+                    out_mat(out.data.data(), out.shape[0], out.shape[1]);
+                out_mat = a_mat.transpose();
+              }
+              return py::cast(out);
+            }
             bool req_grad = tape->record_ops_ && self.requires_grad;
             auto* out =
                 tape->alloc_tensor({self.shape[1], self.shape[0]}, req_grad);
-            auto op = std::make_shared<mlengine::autograd::ops::TransposeOp>(
+            auto* op = tape->allocate_op<mlengine::autograd::ops::TransposeOp>(
                 &self, out);
-            op->forward();
-            tape->record_op(op);
-            return out;
+            {
+              py::gil_scoped_release release;
+              op->forward();
+            }
+            return py::cast(out, py::return_value_policy::reference);
           },
-          "Transposes a 2D tensor.", py::return_value_policy::reference)
+          "Transposes a 2D tensor.")
       .def(
           "relu",
-          [](mlengine::autograd::Tensor& self) {
-            auto* tape = mlengine::autograd::Tape::get_global();
+          [](mlengine::autograd::Tensor& self) -> py::object {
+            auto* tape = mlengine::autograd::Tape::global_tape();
+            if (!tape) {
+              mlengine::autograd::Tensor out(self.shape, false);
+              {
+                py::gil_scoped_release release;
+                out.data = self.data.cwiseMax(0.0f);
+              }
+              return py::cast(out);
+            }
             bool req_grad = tape->record_ops_ && self.requires_grad;
             auto* out = tape->alloc_tensor(self.shape, req_grad);
-
-            auto op =
-                std::make_shared<mlengine::autograd::ops::ReLUOp>(&self, out);
-            op->forward();
-            tape->record_op(op);
-
-            return out;
+            auto* op =
+                tape->allocate_op<mlengine::autograd::ops::ReLUOp>(&self, out);
+            {
+              py::gil_scoped_release release;
+              op->forward();
+            }
+            return py::cast(out, py::return_value_policy::reference);
           },
-          "Element-wise rectified linear activation.",
-          py::return_value_policy::reference);
+          "Element-wise rectified linear activation.");
 
   py::implicitly_convertible<py::array_t<float>, mlengine::autograd::Tensor>();
 
@@ -532,10 +743,9 @@ void bind_core_utils(py::module_& m) {
            py::arg("data"), py::arg("requires_grad") = true,
            "Push an existing tensor onto the tape, copying its data.",
            py::return_value_policy::reference)
-      .def("record_op", &mlengine::autograd::Tape::record_op, py::arg("op"),
-           "Register a primitive operation on the tape.")
       .def("backward", &mlengine::autograd::Tape::backward,
-           "Execute the reverse-mode accumulation (backpropagation).")
+           "Execute the reverse-mode accumulation (backpropagation).",
+           py::call_guard<py::gil_scoped_release>())
       .def("reset", &mlengine::autograd::Tape::reset,
            "Clear the tape's recorded ops and reset the memory pool index.");
 

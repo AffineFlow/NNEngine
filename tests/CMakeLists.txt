@@ -14,6 +14,9 @@ FetchContent_MakeAvailable(googletest)
 add_executable(nne_tests 
     cpp/test_tensor_tape.cpp
     cpp/test_autograd_ops.cpp
+    cpp/test_eager_tape.cpp
+    cpp/test_dataloader.cpp
+    cpp/test_jit_graph.cpp
 )
 
 target_link_libraries(nne_tests PRIVATE NNEngine::Core GTest::gtest_main)

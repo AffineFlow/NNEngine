@@ -1,29 +1,41 @@
 #include <gtest/gtest.h>
 
+#include <memory>
+
+#include "autograd/Tensor.hpp"
+#include "core/DataLoader.hpp"
 #include "core/JITGraph.hpp"
 #include "layers/DenseLayer.hpp"
+#include "losses/MSELoss.hpp"
+#include "optimizers/SGD.hpp"
 
 using namespace mlengine;
+using namespace mlengine::autograd;
 
-TEST(JITGraphTest, TraceForwardPass) {
-  core::JITGraph graph;
-  layers::DenseLayer dense(4, 4);
+TEST(JITGraphTest, TraceAndExecuteBatch) {
+  auto dense = std::make_shared<layers::DenseLayer>(4, 4);
+  auto opt = std::make_shared<core::SGD>(0.01f);
+  auto loss = std::make_shared<core::MSELoss>();
 
-  Tensor input({1, 4});
-  input.fill(1.0f);
+  core::JITGraph graph(dense, opt, loss);
 
-  // Trace the computation
-  graph.begin_trace();
-  Tensor output = dense.forward(input);
-  graph.end_trace();
+  Tensor input({2, 4});
+  input.data.setConstant(1.0f);
 
-  EXPECT_TRUE(graph.is_compiled());
-  EXPECT_GT(graph.node_count(), 0);
+  Tensor target({2, 4});
+  target.data.setConstant(0.0f);
 
-  // Execute compiled graph and ensure it matches eager mode
-  Tensor compiled_output = graph.execute({input});
+  core::DataLoader loader(input, target, 2);
 
-  for (size_t i = 0; i < output.size(); i++) {
-    EXPECT_FLOAT_EQ(output.data()[i], compiled_output.data()[i]);
-  }
+  // Trace the computation (which compiles the graph and does one
+  // forward/backward pass)
+  float initial_loss = graph.trace_batch(loader);
+
+  EXPECT_GT(initial_loss, 0.0f);
+
+  // Reset loader and run compiled fast loop for the epoch
+  loader.reset();
+  auto [total_loss, batches] = graph.fast_loop(loader);
+
+  EXPECT_EQ(batches, 1);
 }
