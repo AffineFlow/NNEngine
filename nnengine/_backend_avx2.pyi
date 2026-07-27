@@ -297,6 +297,10 @@ class Regularizer:
     """
     Penalty term applied to trainable parameters during optimization.
     """
+    def apply(self, parameters: collections.abc.Sequence[Tensor]) -> float:
+        """
+        Accumulate a regularization penalty and any gradient adjustment.
+        """
 class SGD(Optimizer):
     """
     Plain stochastic gradient descent optimizer.
@@ -351,10 +355,6 @@ class Tape:
         """
         Push an existing tensor onto the tape, copying its data.
         """
-    def record_op(self, op: Op) -> None:
-        """
-        Register a primitive operation on the tape.
-        """
     def reset(self) -> None:
         """
         Clear the tape's recorded ops and reset the memory pool index.
@@ -372,12 +372,12 @@ class Tensor:
     A multi-dimensional array with autograd support.
     """
     @typing.overload
-    def __add__(self, other: Tensor) -> Tensor:
+    def __add__(self, other: Tensor) -> typing.Any:
         """
-        Element-wise addition of two tensors. Records to the active autograd tape.
+        Element-wise addition of two tensors.
         """
     @typing.overload
-    def __add__(self, val: typing.SupportsFloat | typing.SupportsIndex) -> Tensor:
+    def __add__(self, val: typing.SupportsFloat | typing.SupportsIndex) -> typing.Any:
         ...
     def __buffer__(self, flags):
         """
@@ -411,19 +411,19 @@ class Tensor:
     @typing.overload
     def __isub__(self, val: typing.SupportsFloat | typing.SupportsIndex) -> Tensor:
         ...
-    def __matmul__(self, other: Tensor) -> Tensor:
+    def __matmul__(self, other: Tensor) -> typing.Any:
         """
-        Matrix multiplication of two 2D tensors. Records to the active autograd tape.
-        """
-    @typing.overload
-    def __mul__(self, other: Tensor) -> Tensor:
-        """
-        Element-wise multiplication of two tensors. Records to the active autograd tape.
+        Matrix multiplication of two 2D tensors.
         """
     @typing.overload
-    def __mul__(self, val: typing.SupportsFloat | typing.SupportsIndex) -> Tensor:
+    def __mul__(self, other: Tensor) -> typing.Any:
+        """
+        Element-wise multiplication of two tensors.
+        """
+    @typing.overload
+    def __mul__(self, val: typing.SupportsFloat | typing.SupportsIndex) -> typing.Any:
         ...
-    def __radd__(self, val: typing.SupportsFloat | typing.SupportsIndex) -> Tensor:
+    def __radd__(self, val: typing.SupportsFloat | typing.SupportsIndex) -> typing.Any:
         ...
     def __release_buffer__(self, buffer):
         """
@@ -431,39 +431,60 @@ class Tensor:
         """
     def __repr__(self) -> str:
         ...
-    def __rmul__(self, val: typing.SupportsFloat | typing.SupportsIndex) -> Tensor:
+    def __rmul__(self, val: typing.SupportsFloat | typing.SupportsIndex) -> typing.Any:
         ...
-    def __rsub__(self, val: typing.SupportsFloat | typing.SupportsIndex) -> Tensor:
+    def __rsub__(self, val: typing.SupportsFloat | typing.SupportsIndex) -> typing.Any:
         ...
-    def __rtruediv__(self, val: typing.SupportsFloat | typing.SupportsIndex) -> Tensor:
-        ...
-    @typing.overload
-    def __sub__(self, other: Tensor) -> Tensor:
-        """
-        Element-wise subtraction of two tensors. Records to the active autograd tape.
-        """
-    @typing.overload
-    def __sub__(self, val: typing.SupportsFloat | typing.SupportsIndex) -> Tensor:
+    def __rtruediv__(self, val: typing.SupportsFloat | typing.SupportsIndex) -> typing.Any:
         ...
     @typing.overload
-    def __truediv__(self, other: Tensor) -> Tensor:
+    def __sub__(self, other: Tensor) -> typing.Any:
         """
-        Element-wise division of two tensors. Records to the active autograd tape.
+        Element-wise subtraction of two tensors.
         """
     @typing.overload
-    def __truediv__(self, val: typing.SupportsFloat | typing.SupportsIndex) -> Tensor:
+    def __sub__(self, val: typing.SupportsFloat | typing.SupportsIndex) -> typing.Any:
+        ...
+    @typing.overload
+    def __truediv__(self, other: Tensor) -> typing.Any:
+        """
+        Element-wise division of two tensors.
+        """
+    @typing.overload
+    def __truediv__(self, val: typing.SupportsFloat | typing.SupportsIndex) -> typing.Any:
         ...
     def backward(self) -> None:
         """
         Computes the gradient of current tensor w.r.t. graph leaves.
         """
-    def mean(self) -> Tensor:
+    def exp(self) -> typing.Any:
         """
-        Mean of all elements. Records to the active autograd tape.
+        Element-wise exponential.
         """
-    def sum(self) -> Tensor:
+    def log(self) -> typing.Any:
         """
-        Sum of all elements. Records to the active autograd tape.
+        Element-wise natural logarithm.
+        """
+    def mean(self) -> typing.Any:
+        """
+        Mean of all elements.
+        """
+    def relu(self) -> typing.Any:
+        """
+        Element-wise rectified linear activation.
+        """
+    def sum(self) -> typing.Any:
+        """
+        Sum of all elements.
+        """
+    def transpose(self) -> typing.Any:
+        """
+        Transposes a 2D tensor.
+        """
+    @property
+    def T(self) -> typing.Any:
+        """
+        Returns a view of the 2D tensor with its dimensions reversed.
         """
     @property
     def data(self) -> numpy.typing.NDArray[numpy.float32]:
