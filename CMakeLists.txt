@@ -13,9 +13,10 @@ if(SKBUILD_FREE_THREADED)
     message(STATUS "Free-threaded Python detected: defining Py_GIL_DISABLED=1")
 endif()
 
-find_program(CCACHE_PROGRAM ccache)
+find_program(CCACHE_PROGRAM NAMES sccache ccache)
 if(CCACHE_PROGRAM)
     set(CMAKE_CXX_COMPILER_LAUNCHER "${CCACHE_PROGRAM}" CACHE STRING "Compiler launcher" FORCE)
+    set(CMAKE_C_COMPILER_LAUNCHER "${CCACHE_PROGRAM}" CACHE STRING "Compiler launcher" FORCE)
 endif()
 
 set(CMAKE_CXX_STANDARD 17)
@@ -84,6 +85,11 @@ endif()
 # --- Subdirectories ---
 add_subdirectory(src)
 
-# Enable testing at the root level, then dive into the tests folder
-enable_testing()
-add_subdirectory(tests)
+# Enable testing at the root level, then dive into the tests folder.
+# Wheel builds (cibuildwheel) don't need the C++ test suite or the
+# GoogleTest FetchContent it pulls in, so this can be turned off there.
+option(NNENGINE_BUILD_TESTS "Build the C++ test suite (fetches GoogleTest)" ON)
+if(NNENGINE_BUILD_TESTS)
+    enable_testing()
+    add_subdirectory(tests)
+endif()

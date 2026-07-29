@@ -30,11 +30,11 @@ jobs:
           name: py-stubs
           path: nnengine/
 
-      - name: Create ccache directory
+      - name: Create ccache directory (Linux/macOS)
         if: runner.os != 'Windows'
         run: mkdir -p .ccache
 
-      - name: Cache ccache
+      - name: Cache ccache (Linux/macOS)
         if: runner.os != 'Windows'
         uses: actions/cache@v6
         with:
@@ -43,30 +43,46 @@ jobs:
           restore-keys: |
             ccache-${{ matrix.os }}-
 
+      - name: Cache sccache (Windows)
+        if: runner.os == 'Windows'
+        uses: actions/cache@v6
+        with:
+          path: ${{ github.workspace }}/.sccache
+          key: sccache-${{ matrix.os }}-${{ github.sha }}
+          restore-keys: |
+            sccache-${{ matrix.os }}-
+
       - name: Build and Test wheels
         uses: pypa/cibuildwheel@v4.1.1
         env:
           CIBW_BUILD_VERBOSITY: 3
           CIBW_BEFORE_ALL_LINUX: yum install -y ccache
           CIBW_BEFORE_ALL_MACOS: brew install libomp ccache
+          CIBW_BEFORE_ALL_WINDOWS: choco install sccache -y
           CIBW_BUILD_FRONTEND: pip
           CIBW_ARCHS_MACOS: arm64
           CIBW_TEST_COMMAND: "python -c \"import nnengine as nne; print(nne._backend)\""
+          # cmake --build reads this directly to parallelize across
+          # targets (e.g. the AVX2 and AVX512 variants), on top of the
+          # per-file /MP parallelism CMakeLists.txt already sets for MSVC
+          CMAKE_BUILD_PARALLEL_LEVEL: 2
 
           CIBW_ENVIRONMENT_LINUX: >
             PATH="/usr/lib64/ccache:/usr/lib/ccache:$PATH"
-            CMAKE_CXX_COMPILER_LAUNCHER=ccache
             CCACHE_DIR=/project/.ccache
             CCACHE_COMPILERCHECK=content
+            SKBUILD_CMAKE_ARGS="-DNNENGINE_BUILD_TESTS=OFF"
 
           CIBW_ENVIRONMENT_MACOS: >
-            CMAKE_C_COMPILER_LAUNCHER=ccache
-            CMAKE_CXX_COMPILER_LAUNCHER=ccache
             CCACHE_DIR=${{ github.workspace }}/.ccache
             CCACHE_COMPILERCHECK=content
-            SKBUILD_CMAKE_ARGS="-DCMAKE_OSX_ARCHITECTURES=arm64"
+            SKBUILD_CMAKE_ARGS="-DCMAKE_OSX_ARCHITECTURES=arm64 -DNNENGINE_BUILD_TESTS=OFF"
             ARCHFLAGS="-arch arm64"
             MACOSX_DEPLOYMENT_TARGET="26.0"
+
+          CIBW_ENVIRONMENT_WINDOWS: >
+            SCCACHE_DIR=${{ github.workspace }}/.sccache
+            SKBUILD_CMAKE_ARGS="-DNNENGINE_BUILD_TESTS=OFF"
 
       - name: Fix cache permissions for Docker
         if: runner.os == 'Linux'
