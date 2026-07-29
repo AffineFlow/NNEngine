@@ -1,31 +1,19 @@
+from typing import Any
+
 from . import _backend
 
+
 class Module(_backend.Module):
-    """Python base class for composing NNEngine layers.
+    """Python base class for composing NNEngine layers."""
 
-    Subclasses automatically register child layers assigned to `self` 
-    and implement a forward method that accepts a Tensor object.
-    
-    This abstracts away the manual C++ module registry process.
-    """
-
-    def __init__(self):
-        """Initialize the native module base class."""
+    def __init__(self) -> None:
         super().__init__()
 
-    def __setattr__(self, name, value):
-        """Intercept assignments and register them natively in C++.
-        
-        Args:
-            name (str): The attribute name assigned to the layer.
-            value (Any): The layer or module instance to bind.
-            
-        Raises:
-            AttributeError: If a user attempts to reassign an already registered layer.
-        """
-        if isinstance(value, _backend.Layer) or isinstance(value, _backend.Module):
+    def __setattr__(self, name: str, value: Any) -> None:
+        if isinstance(value, (_backend.Layer, _backend.Module)):
             if hasattr(self, name):
-                raise AttributeError(f"Layer '{name}' is already registered. Reassignment is not allowed.")
+                raise AttributeError(
+                    f"Layer '{name}' is already registered. Reassignment is not allowed."
+                )
             self.register_module(name, value)
-            
         super().__setattr__(name, value)

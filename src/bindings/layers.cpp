@@ -148,9 +148,8 @@ void bind_layers(py::module_& m) {
            "Evaluate the model without accumulating gradients.",
            py::call_guard<py::gil_scoped_release>())
       .def("fast_fit", &JITGraph::fast_fit, py::arg("dataloader"),
-           py::arg("val_dataloader") = nullptr, py::arg("epochs"),
-           py::arg("tol") = 1e-4f, py::arg("n_iter_no_change") = 10,
-           py::arg("verbose") = true,
+           py::arg("val_dataloader"), py::arg("epochs"), py::arg("tol") = 1e-4f,
+           py::arg("n_iter_no_change") = 10, py::arg("verbose") = true,
            "Train the JIT graph natively with early stopping.",
            py::call_guard<py::gil_scoped_release>())
       .def("save_checkpoint", &JITGraph::save_checkpoint,

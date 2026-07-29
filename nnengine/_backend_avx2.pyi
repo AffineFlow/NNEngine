@@ -111,7 +111,7 @@ class JITGraph:
     """
     High-performance compiled training loop executor.
     """
-    def __init__(self, model: Layer, optimizer: Optimizer, loss_fn: Loss, regularizer: Regularizer = None) -> None:
+    def __init__(self, model: Layer, optimizer: Optimizer, loss_fn: Loss, regularizer: Regularizer | None = None) -> None:
         """
         Bind the model, optimizer, and loss function to the JIT compiler.
         """
@@ -119,7 +119,7 @@ class JITGraph:
         """
         Evaluate the model without accumulating gradients.
         """
-    def fast_fit(self, dataloader: DataLoader, val_dataloader: DataLoader = None, epochs: typing.SupportsInt | typing.SupportsIndex, tol: typing.SupportsFloat | typing.SupportsIndex = 9.999999747378752e-05, n_iter_no_change: typing.SupportsInt | typing.SupportsIndex = 10, verbose: bool = True) -> None:
+    def fast_fit(self, dataloader: DataLoader, val_dataloader: DataLoader, epochs: typing.SupportsInt | typing.SupportsIndex, tol: typing.SupportsFloat | typing.SupportsIndex = 9.999999747378752e-05, n_iter_no_change: typing.SupportsInt | typing.SupportsIndex = 10, verbose: bool = True) -> None:
         """
         Train the JIT graph natively with early stopping.
         """
