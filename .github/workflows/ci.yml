@@ -23,7 +23,7 @@ jobs:
           python-version: '3.14'
           
       - name: Install dependencies
-        run: pip install pytest numpy pybind11-stubgen ninja "cmake<4" scikit-build-core
+        run: pip install pytest numpy pybind11-stubgen ninja scikit-build-core
         
       - name: Build engine
         run: pip install -e .

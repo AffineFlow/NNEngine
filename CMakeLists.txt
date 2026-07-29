@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 4.4.1)
+cmake_minimum_required(VERSION 4.4.0)
 
 set(CMAKE_POLICY_VERSION_MINIMUM 3.5 CACHE STRING "" FORCE)
 if(POLICY CMP0135)
