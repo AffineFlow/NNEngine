@@ -76,7 +76,7 @@ jobs:
           CIBW_ENVIRONMENT_MACOS: >
             CCACHE_DIR=${{ github.workspace }}/.ccache
             CCACHE_COMPILERCHECK=content
-            SKBUILD_CMAKE_ARGS="-DCMAKE_OSX_ARCHITECTURES=arm64 -DNNENGINE_BUILD_TESTS=OFF"
+            SKBUILD_CMAKE_ARGS="-DCMAKE_OSX_ARCHITECTURES=arm64;-DNNENGINE_BUILD_TESTS=OFF"
             ARCHFLAGS="-arch arm64"
             MACOSX_DEPLOYMENT_TARGET="26.0"
 
