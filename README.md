@@ -11,12 +11,11 @@ Designed for rapid experimentation without the Python Global Interpreter Lock (G
 
 ## Highlights
 
+- **Dual Execution Modes**: Train dynamic graphs using the `@nne.eager` decorator for zero-allocation step-by-step execution, or compile static graphs with `JITCompiler` for maximum throughput on heavy workloads.
+- **Dynamic Hardware Dispatch**: The engine ships as a "fat wheel," automatically detecting your CPU at runtime to dispatch highly optimized AVX2 or AVX-512 instructions.
 - **Native Loop Hoisting**: The `JITCompiler::fit` loop executes entirely in C++, eliminating the Python GIL overhead across epochs and batches.
 - **CNN & Modern Layer Support**: Built-in support for `Conv2dLayer` (via parallelized `im2col`), `BatchNorm1dLayer`, `DropoutLayer`, and Leaky ReLUs.
 - **Zero-Allocation Autograd**: Uses arena allocation (`Tape`) and flat contiguous memory structs to dynamically build computational graphs without heap allocations.
-- **Native Schedulers**: Includes `StepLR` learning rate scheduling calculated natively per-epoch.
-- **Pure Python Extensibility**: Easily define custom Autograd operations (`nn.Op`) in pure Python. The engine uses PyBind11 trampolines to dispatch the C++ backward pass dynamically to your Python methods.
-- **Native Checkpointing**: Dump and restore raw contiguous memory weights directly to disk via C++ streams (`.nne` files) for blazing fast model saving.
 
 ## Installation
 
@@ -61,6 +60,31 @@ Or install in editable/development mode from the repository (requires CMake 3.18
     trainer.fit(dataloader, epochs=40, verbose=False)
     trainer.save_checkpoint("faces_model")
 
+## Quick Start: Eager Mode Training
+
+If you prefer PyTorch-style step-by-step execution or need dynamic control flow (like `if` statements inside your forward pass), use the `@nne.eager` decorator. It manages the C++ Autograd tape and GIL releases automatically:
+
+```python
+import nnengine as nne
+
+model = nne.DenseLayer(10, 1)
+optimizer = nne.AdamW(learning_rate=0.01, weight_decay=1e-4)
+optimizer.set_parameters(model.parameters())
+loss_fn = nne.MSELoss()
+
+@nne.eager(optimizer=optimizer, loss_fn=loss_fn)
+def train_step(mod, x):
+    # Standard Python control flow works perfectly here!
+    return mod(x)
+
+# Training loop
+for epoch in range(10):
+    dataloader.reset()
+    while dataloader.has_next():
+        dataloader.next_batch(X_batch, y_batch)
+        loss = train_step(model, X_batch, y_batch)
+```
+
 ## Defining Custom Autograd Operations in Python
 
     import numpy as np
@@ -83,13 +107,21 @@ Or install in editable/development mode from the repository (requires CMake 3.18
 
 ## Testing & Validation Suite
 
-Execute the full validation and benchmark suite via:
+Execute the full Scikit-Learn dataset validation and benchmark suite via:
 
     python examples/script.py
 
-### Latest Benchmark Results (Multi-Seed Selection)
+To benchmark raw FLOPs and OpenMP scaling without network I/O overhead, execute the massive synthetic stress test:
 
-| Benchmark Task | Scikit-Learn | PyTorch (ATen) | NNEngine (C++ JIT) | Speedup |
-|---|--:|--:|--:|--:|
-| **Deep Regression** | MSE: 0.2811<br>Time: 9.13s | MSE: 0.2720<br>Time: 18.49s | **MSE: 0.2675**<br>Time: **2.76s** | **6.70x** |
-| **Deep CNN** | *N/A* | Acc: 97.50%<br>Time: 5.87s | **Acc: 97.50%**<br>Time: **4.49s** | **1.31x** |
+    python examples/stress_test.py
+
+### Latest Benchmark Results
+
+NNEngine's native C++ execution eliminates the Python GIL, consistently outperforming PyTorch's ATen backend on the CPU in both JIT and Eager modes.
+
+| Benchmark Task | Scikit-Learn | PyTorch (ATen) | NNEngine (Eager) | NNEngine (C++ JIT) | Max Speedup (vs PyTorch) |
+|---|--:|--:|--:|--:|--:|
+| **Deep Regression (Housing)** | MSE: 0.2811<br>Time: 8.59s | MSE: 0.2720<br>Time: 18.18s | MSE: 0.2662<br>**Time: 3.19s** | MSE: 0.2669<br>Time: 5.10s | **5.69x** |
+| **Deep CNN (Faces)** | *N/A* | Acc: 97.50%<br>Time: 5.97s | Acc: 97.50%<br>Time: 5.02s | Acc: 97.50%<br>**Time: 4.41s** | **1.35x** |
+| **Massive Wide MLP** *(Stress)* | *N/A* | Time: 46.09s | Time: 38.98s | **Time: 38.09s** | **1.21x** |
+| **Deep Spatial CNN** *(Stress)* | *N/A* | Time: 39.96s | Time: 36.76s | **Time: 35.70s** | **1.12x** |
