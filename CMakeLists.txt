@@ -64,23 +64,7 @@ else()
 
     # Fetch OpenBLAS
     if(NOT APPLE AND NOT MSVC)
-        set(NOFORTRAN 1 CACHE BOOL "Build without Fortran" FORCE)
-        set(USE_OPENMP 1 CACHE BOOL "Use OpenMP in OpenBLAS" FORCE)
-        set(BUILD_WITHOUT_LAPACK 1 CACHE BOOL "We only need BLAS for Eigen" FORCE)
-        set(BUILD_SHARED_LIBS OFF CACHE BOOL "Build static OpenBLAS" FORCE)
-        set(BUILD_TESTING OFF CACHE BOOL "Disable OpenBLAS tests" FORCE)
-        set(TARGET "CORE2" CACHE STRING "Base target for OpenBLAS fallback" FORCE)
-        set(DYNAMIC_ARCH 1 CACHE BOOL "Build OpenBLAS with dynamic CPU dispatch" FORCE)
-        set(DYNAMIC_LIST "CORE2;HASWELL;SKYLAKEX;ZEN" CACHE STRING "Limit OpenBLAS compilation to these 4 architectures" FORCE)
-        
-        set(OPENBLAS_URL "https://github.com/OpenMathLib/OpenBLAS/releases/download/v0.3.34/OpenBLAS-0.3.34.tar.gz")
-
-        FetchContent_Declare(
-            OpenBLAS
-            URL "${OPENBLAS_URL}"
-            EXCLUDE_FROM_ALL
-        )
-        FetchContent_MakeAvailable(OpenBLAS)
+        find_package(BLAS REQUIRED)
     endif()
 endif()
 

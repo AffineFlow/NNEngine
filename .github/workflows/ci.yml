@@ -23,7 +23,10 @@ jobs:
           python-version: '3.14'
           
       - name: Install dependencies
-        run: pip install pytest numpy pybind11-stubgen ninja scikit-build-core
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libopenblas-dev
+          pip install pytest numpy pybind11-stubgen ninja scikit-build-core
         
       - name: Build engine
         run: pip install -e .
