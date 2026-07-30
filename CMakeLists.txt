@@ -70,6 +70,7 @@ else()
         set(BUILD_SHARED_LIBS OFF CACHE BOOL "Build static OpenBLAS" FORCE)
         set(BUILD_TESTING OFF CACHE BOOL "Disable OpenBLAS tests" FORCE)
         set(DYNAMIC_ARCH 1 CACHE BOOL "Build OpenBLAS with dynamic CPU dispatch" FORCE)
+        set(DYNAMIC_LIST "GENERIC;HASWELL;SKYLAKEX;ZEN" CACHE STRING "Limit OpenBLAS compilation to these 4 architectures" FORCE)
 
         set(OPENBLAS_URL "https://github.com/OpenMathLib/OpenBLAS/releases/download/v0.3.34/OpenBLAS-0.3.34.tar.gz")
 

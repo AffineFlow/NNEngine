@@ -7,7 +7,7 @@ build-backend = "scikit_build_core.build"
 
 [project]
 name = "nn-engine-core"
-version = "0.1.8"
+version = "0.1.9"
 description = "A high-performance C++ parametric optimization backend for NNEngine"
 readme = "README.md"
 license = { text = "MIT" }
@@ -36,8 +36,8 @@ classifiers = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/MLEngineProject/NNEngine"
-Tracker = "https://github.com/MLEngineProject/NNEngine/issues"
+Homepage = "https://github.com/AffineFlow/NNEngine"
+Tracker = "https://github.com/AffineFlow/NNEngine/issues"
 
 [tool.scikit-build]
 cmake.version = ">=4.4.0"
