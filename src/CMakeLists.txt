@@ -35,7 +35,11 @@ set(ENGINE_SOURCES
 
 # 2. Determine architecture target capabilities
 if(CMAKE_SYSTEM_PROCESSOR MATCHES "(x86_64|AMD64|amd64)")
-    set(MICROARCHS "generic" "avx2" "avx512")
+    if(MSVC)
+        set(MICROARCHS "generic" "avx2")
+    else()
+        set(MICROARCHS "generic" "avx2" "avx512")
+    endif()
 else()
     set(MICROARCHS "generic")
 endif()
