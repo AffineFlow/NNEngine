@@ -3,7 +3,7 @@
 #include <algorithm>
 #include <stdexcept>
 
-namespace mlengine::autograd {
+namespace affineengine::autograd {
 
 Tape*& Tape::global_tape() {
   static thread_local Tape* current = nullptr;
@@ -30,7 +30,7 @@ Tape::~Tape() {
   }
 }
 
-Tensor* Tape::alloc_tensor(const mlengine::Shape& shape, bool requires_grad) {
+Tensor* Tape::alloc_tensor(const affineengine::Shape& shape, bool requires_grad) {
   bool req_grad_actual = record_ops_ && requires_grad;
 
   if (tensor_idx_ >= tensor_pool_.size()) {
@@ -97,4 +97,4 @@ TapeGuard::TapeGuard(Tape* new_tape) {
 
 TapeGuard::~TapeGuard() { Tape::set_global(prev_tape_); }
 
-}  // namespace mlengine::autograd
+}  // namespace affineengine::autograd

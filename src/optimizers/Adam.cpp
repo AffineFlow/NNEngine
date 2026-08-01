@@ -2,7 +2,7 @@
 
 #include <cmath>
 
-namespace mlengine::core {
+namespace affineengine::core {
 
 Adam::Adam(float learning_rate) : Optimizer(learning_rate) {}
 
@@ -16,9 +16,9 @@ void Adam::set_parameters(const std::vector<autograd::Tensor*>& params) {
   v_.clear();
   t_ = 0;
   for (auto* p : parameters_) {
-    m_.push_back(mlengine::FlatStorage(p->data.size()));
+    m_.push_back(affineengine::FlatStorage(p->data.size()));
     m_.back().setZero();
-    v_.push_back(mlengine::FlatStorage(p->data.size()));
+    v_.push_back(affineengine::FlatStorage(p->data.size()));
     v_.back().setZero();
   }
 }
@@ -86,4 +86,4 @@ void Adam::load_state(std::istream& is) {
     is.read(reinterpret_cast<char*>(v_[i].data()), size * sizeof(float));
   }
 }
-}  // namespace mlengine::core
+}  // namespace affineengine::core

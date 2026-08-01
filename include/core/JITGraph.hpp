@@ -14,7 +14,7 @@
 #include "core/Regularizer.hpp"
 #include "core/Scheduler.hpp"
 
-namespace mlengine::core {
+namespace affineengine::core {
 
 class JITGraph {
  private:
@@ -47,4 +47,4 @@ class JITGraph {
   void load_checkpoint(const std::string& base_filepath);
 };
 
-}  // namespace mlengine::core
+}  // namespace affineengine::core

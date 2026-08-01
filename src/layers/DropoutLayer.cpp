@@ -3,7 +3,7 @@
 #include "autograd/Tape.hpp"
 #include "autograd/ops/DropoutOp.hpp"
 
-namespace mlengine::layers {
+namespace affineengine::layers {
 
 DropoutLayer::DropoutLayer(float p) : p_(p) {}
 
@@ -11,10 +11,10 @@ autograd::Tensor* DropoutLayer::forward(autograd::Tensor* input) {
   auto* tape = autograd::Tape::get_global();
   bool req_grad = tape->record_ops_ && input->requires_grad;
   auto* out = tape->alloc_tensor(input->shape, req_grad);
-  auto* op = tape->allocate_op<mlengine::autograd::ops::DropoutOp>(
+  auto* op = tape->allocate_op<affineengine::autograd::ops::DropoutOp>(
       input, out, p_, &is_training_);
   op->forward();
   return out;
 }
 
-}  // namespace mlengine::layers
+}  // namespace affineengine::layers

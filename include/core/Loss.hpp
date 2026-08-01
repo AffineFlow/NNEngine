@@ -3,7 +3,7 @@
 #include "autograd/Tensor.hpp"
 #include "core/Types.hpp"
 
-namespace mlengine::core {
+namespace affineengine::core {
 
 /**
  * @brief Objective function that produces a scalar training signal.
@@ -37,4 +37,4 @@ class Loss {
   virtual void backward() = 0;
 };
 
-}  // namespace mlengine::core
+}  // namespace affineengine::core

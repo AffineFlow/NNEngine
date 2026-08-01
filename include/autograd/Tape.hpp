@@ -8,7 +8,7 @@
 #include "autograd/Op.hpp"
 #include "autograd/Tensor.hpp"
 
-namespace mlengine::autograd {
+namespace affineengine::autograd {
 
 class Tape {
  private:
@@ -35,7 +35,7 @@ class Tape {
   explicit Tape(bool record_ops = true);
   ~Tape();
 
-  Tensor* alloc_tensor(const mlengine::Shape& shape, bool requires_grad = true);
+  Tensor* alloc_tensor(const affineengine::Shape& shape, bool requires_grad = true);
   Tensor* push_tensor(const Tensor& data, bool requires_grad = true);
 
   void record_op(std::shared_ptr<Op> op);
@@ -83,4 +83,4 @@ class TapeGuard {
   ~TapeGuard();
 };
 
-}  // namespace mlengine::autograd
+}  // namespace affineengine::autograd

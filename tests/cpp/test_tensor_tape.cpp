@@ -4,8 +4,8 @@
 #include "autograd/Tensor.hpp"
 #include "core/Types.hpp"
 
-using namespace mlengine;
-using namespace mlengine::autograd;
+using namespace affineengine;
+using namespace affineengine::autograd;
 
 // ==============================================================================
 // Tensor Memory and Shape Management

@@ -10,7 +10,7 @@
 #include "regularizers/L2Regularizer.hpp"
 
 namespace py = pybind11;
-using namespace mlengine::core;
+using namespace affineengine::core;
 
 void bind_losses_and_regs(py::module_& m) {
   py::class_<Loss, std::shared_ptr<Loss>>(

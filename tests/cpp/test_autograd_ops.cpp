@@ -6,8 +6,8 @@
 #include "autograd/ops/AddOp.hpp"
 #include "autograd/ops/MulOp.hpp"
 
-using namespace mlengine;
-using namespace mlengine::autograd;
+using namespace affineengine;
+using namespace affineengine::autograd;
 
 TEST(AutogradTest, TapeContextManagement) {
   EXPECT_THROW(Tape::get_global(), std::runtime_error);

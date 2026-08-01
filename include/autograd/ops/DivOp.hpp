@@ -2,7 +2,7 @@
 #include "autograd/Op.hpp"
 #include "autograd/Tensor.hpp"
 
-namespace mlengine::autograd::ops {
+namespace affineengine::autograd::ops {
 
 class DivOp : public Op {
   Tensor *a_, *b_, *out_;
@@ -13,4 +13,4 @@ class DivOp : public Op {
   void backward() override;
 };
 
-}  // namespace mlengine::autograd::ops
+}  // namespace affineengine::autograd::ops

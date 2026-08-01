@@ -2,7 +2,7 @@
 
 #include <stdexcept>
 
-namespace mlengine::autograd::ops {
+namespace affineengine::autograd::ops {
 void AddOp::forward() {
   if (a_->shape != b_->shape)
     throw std::invalid_argument("AddOp shape mismatch");
@@ -14,4 +14,4 @@ void AddOp::backward() {
   if (a_->requires_grad) a_->grad += out_->grad;
   if (b_->requires_grad) b_->grad += out_->grad;
 }
-}  // namespace mlengine::autograd::ops
+}  // namespace affineengine::autograd::ops

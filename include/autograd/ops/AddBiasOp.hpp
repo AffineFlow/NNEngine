@@ -2,7 +2,7 @@
 #include "autograd/Op.hpp"
 #include "autograd/Tensor.hpp"
 
-namespace mlengine::autograd::ops {
+namespace affineengine::autograd::ops {
 
 /**
  * @brief Broadcast-add a row bias to a batch of activations.
@@ -28,4 +28,4 @@ class AddBiasOp : public Op {
   void backward() override;
 };
 
-}  // namespace mlengine::autograd::ops
+}  // namespace affineengine::autograd::ops

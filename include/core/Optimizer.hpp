@@ -5,7 +5,7 @@
 
 #include "autograd/Tensor.hpp"
 
-namespace mlengine::core {
+namespace affineengine::core {
 
 /**
  * @brief Base class for parameter update rules.
@@ -39,4 +39,4 @@ class Optimizer {
   virtual void set_lr(float lr) { lr_ = lr; }
 };
 
-}  // namespace mlengine::core
+}  // namespace affineengine::core

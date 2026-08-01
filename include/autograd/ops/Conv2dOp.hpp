@@ -4,7 +4,7 @@
 #include "autograd/Op.hpp"
 #include "autograd/Tensor.hpp"
 
-namespace mlengine::autograd::ops {
+namespace affineengine::autograd::ops {
 
 class Conv2dOp : public Op {
   Tensor *x_, *w_, *bias_, *out_;
@@ -12,10 +12,10 @@ class Conv2dOp : public Op {
 
   int max_batch_ = 0;
   int num_threads_ = 1;
-  std::vector<mlengine::FlatStorage> cols_;
-  std::vector<mlengine::FlatStorage> thread_dW_;
-  std::vector<mlengine::FlatStorage> thread_db_;
-  std::vector<mlengine::FlatStorage> thread_dcol_;
+  std::vector<affineengine::FlatStorage> cols_;
+  std::vector<affineengine::FlatStorage> thread_dW_;
+  std::vector<affineengine::FlatStorage> thread_db_;
+  std::vector<affineengine::FlatStorage> thread_dcol_;
 
  public:
   Conv2dOp(Tensor* x, Tensor* w, Tensor* bias, Tensor* out, int in_channels,
@@ -25,4 +25,4 @@ class Conv2dOp : public Op {
   void backward() override;
 };
 
-}  // namespace mlengine::autograd::ops
+}  // namespace affineengine::autograd::ops

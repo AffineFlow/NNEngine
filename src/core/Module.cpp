@@ -5,7 +5,7 @@
 
 #include "autograd/Tape.hpp"
 
-namespace mlengine::core {
+namespace affineengine::core {
 
 std::shared_ptr<Layer> Module::register_module(const std::string& name,
                                                std::shared_ptr<Layer> layer) {
@@ -119,4 +119,4 @@ void Module::load_weights(const std::string& filepath) {
   }
 }
 
-}  // namespace mlengine::core
+}  // namespace affineengine::core

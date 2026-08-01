@@ -1,6 +1,6 @@
 #include "losses/SoftmaxCrossEntropyLoss.hpp"
 
-namespace mlengine::core {
+namespace affineengine::core {
 using ArrayMap = Eigen::Map<
     Eigen::Array<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>>;
 
@@ -37,4 +37,4 @@ void SoftmaxCrossEntropyLoss::backward() {
                 static_cast<float>(batch_size);
   }
 }
-}  // namespace mlengine::core
+}  // namespace affineengine::core

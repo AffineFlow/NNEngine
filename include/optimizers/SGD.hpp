@@ -2,7 +2,7 @@
 
 #include "core/Optimizer.hpp"
 
-namespace mlengine::core {
+namespace affineengine::core {
 
 /**
  * @brief Plain stochastic gradient descent optimizer.
@@ -21,4 +21,4 @@ class SGD : public Optimizer {
   void step() override;
 };
 
-}  // namespace mlengine::core
+}  // namespace affineengine::core

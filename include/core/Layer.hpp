@@ -8,7 +8,7 @@
 #include "autograd/Tensor.hpp"
 #include "core/Types.hpp"
 
-namespace mlengine::core {
+namespace affineengine::core {
 
 /**
  * @brief Abstract building block for differentiable model components.
@@ -44,4 +44,4 @@ class Layer {
   void eval() { train(false); }
 };
 
-}  // namespace mlengine::core
+}  // namespace affineengine::core

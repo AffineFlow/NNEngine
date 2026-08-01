@@ -2,7 +2,7 @@
 #include "autograd/Op.hpp"
 #include "autograd/Tensor.hpp"
 
-namespace mlengine::autograd::ops {
+namespace affineengine::autograd::ops {
 
 /**
  * @brief Elementwise leaky rectified linear activation primitive.
@@ -30,4 +30,4 @@ class LeakyReLUOp : public Op {
   void backward() override;
 };
 
-}  // namespace mlengine::autograd::ops
+}  // namespace affineengine::autograd::ops

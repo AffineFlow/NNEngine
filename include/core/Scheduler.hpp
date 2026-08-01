@@ -4,7 +4,7 @@
 
 #include "core/Optimizer.hpp"
 
-namespace mlengine::core {
+namespace affineengine::core {
 
 class Scheduler {
  protected:
@@ -33,4 +33,4 @@ class StepLR : public Scheduler {
   }
 };
 
-}  // namespace mlengine::core
+}  // namespace affineengine::core

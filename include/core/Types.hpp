@@ -4,7 +4,7 @@
 #include <unsupported/Eigen/CXX11/Tensor>
 #include <vector>
 
-namespace mlengine {
+namespace affineengine {
 
 using Scalar = float;
 
@@ -21,4 +21,4 @@ inline Eigen::Index compute_size(const Shape& shape) {
                          std::multiplies<Eigen::Index>());
 }
 
-}  // namespace mlengine
+}  // namespace affineengine

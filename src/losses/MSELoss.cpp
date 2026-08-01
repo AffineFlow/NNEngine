@@ -1,6 +1,6 @@
 #include "losses/MSELoss.hpp"
 
-namespace mlengine::core {
+namespace affineengine::core {
 float MSELoss::compute_loss() {
   Eigen::Map<Eigen::ArrayXf> pred_map(predictions_->data.data(),
                                       predictions_->data.size());
@@ -16,4 +16,4 @@ void MSELoss::backward() {
                           static_cast<float>(predictions_->data.size());
   }
 }
-}  // namespace mlengine::core
+}  // namespace affineengine::core

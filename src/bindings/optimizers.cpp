@@ -10,7 +10,7 @@
 #include "optimizers/SGD.hpp"
 
 namespace py = pybind11;
-using namespace mlengine::core;
+using namespace affineengine::core;
 
 void bind_optimizers(py::module_& m) {
   py::class_<Optimizer, std::shared_ptr<Optimizer>>(

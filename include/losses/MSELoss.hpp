@@ -3,7 +3,7 @@
 #include "autograd/Tensor.hpp"
 #include "core/Loss.hpp"
 
-namespace mlengine::core {
+namespace affineengine::core {
 
 /**
  * @brief Mean-squared-error objective for regression.
@@ -14,4 +14,4 @@ class MSELoss : public Loss {
   void backward() override;
 };
 
-}  // namespace mlengine::core
+}  // namespace affineengine::core

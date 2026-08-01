@@ -1,6 +1,6 @@
 #include "autograd/ops/ScalarOps.hpp"
 
-namespace mlengine::autograd::ops {
+namespace affineengine::autograd::ops {
 
 void AddScalarOp::forward() {
   if (!out_->has_shape(a_->shape)) out_->resize(a_->shape);
@@ -52,4 +52,4 @@ void RDivScalarOp::backward() {
   }
 }
 
-}  // namespace mlengine::autograd::ops
+}  // namespace affineengine::autograd::ops

@@ -3,8 +3,8 @@
 #include "autograd/Tensor.hpp"
 #include "core/DataLoader.hpp"
 
-using namespace mlengine;
-using namespace mlengine::autograd;
+using namespace affineengine;
+using namespace affineengine::autograd;
 
 TEST(DataLoaderTest, ExactBatching) {
   // 100 samples, batch size 32

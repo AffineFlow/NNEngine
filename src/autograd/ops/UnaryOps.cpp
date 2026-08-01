@@ -2,7 +2,7 @@
 
 #include <Eigen/Core>
 
-namespace mlengine::autograd::ops {
+namespace affineengine::autograd::ops {
 
 void ExpOp::forward() {
   if (!out_->has_shape(a_->shape)) out_->resize(a_->shape);
@@ -24,4 +24,4 @@ void LogOp::backward() {
   }
 }
 
-}  // namespace mlengine::autograd::ops
+}  // namespace affineengine::autograd::ops
