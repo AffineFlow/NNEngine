@@ -7,7 +7,7 @@ build-backend = "scikit_build_core.build"
 
 [project]
 name = "nn-engine-core"
-version = "0.1.9"
+version = "0.1.10"
 description = "A high-performance C++ parametric optimization backend for NNEngine"
 readme = "README.md"
 license = { text = "MIT" }

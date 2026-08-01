@@ -235,34 +235,46 @@ class PyTorchDeepCNN(nn.Module):
     def __init__(self, in_h, in_w, num_classes):
         super().__init__()
         self.in_h, self.in_w = in_h, in_w
-        self.conv1 = nn.Conv2d(1, 16, kernel_size=5, stride=2, padding=2)
+
+        self.conv1 = nn.Conv2d(1, 16, kernel_size=5, stride=1, padding=2)
         self.act1 = nn.LeakyReLU(0.01) 
-        self.conv2 = nn.Conv2d(16, 32, kernel_size=3, stride=2, padding=1)
+        self.pool1 = nn.MaxPool2d(kernel_size=2, stride=2)
+        
+        self.conv2 = nn.Conv2d(16, 32, kernel_size=3, stride=1, padding=1)
         self.act2 = nn.LeakyReLU(0.01) 
+        self.pool2 = nn.MaxPool2d(kernel_size=2, stride=2)
+        
         self.flatten = nn.Flatten()
         self.fc = nn.Linear(32 * (in_h // 4) * (in_w // 4), num_classes)
 
     def forward(self, x):
         x = x.view(-1, 1, self.in_h, self.in_w)
-        x = self.act1(self.conv1(x))
-        x = self.act2(self.conv2(x))
+        x = self.pool1(self.act1(self.conv1(x)))
+        x = self.pool2(self.act2(self.conv2(x)))
         x = self.flatten(x)
         return self.fc(x)
 
 class NNEngineDeepCNN(nne.Module):
     def __init__(self, in_h, in_w, num_classes):
         super().__init__()
-        self.conv1 = nne.Conv2dLayer(1, 16, in_h, in_w, kernel_size=5, stride=2, pad=2)
+        self.conv1 = nne.Conv2dLayer(1, 16, in_h, in_w, kernel_size=5, stride=1, pad=2)
         self.act1 = nne.LeakyReLULayer(0.01) 
+        self.pool1 = nne.MaxPool2dLayer(16, in_h, in_w, kernel_size=2, stride=2, pad=0)
+        
         out_h1, out_w1 = in_h // 2, in_w // 2
-        self.conv2 = nne.Conv2dLayer(16, 32, out_h1, out_w1, kernel_size=3, stride=2, pad=1)
+        self.conv2 = nne.Conv2dLayer(16, 32, out_h1, out_w1, kernel_size=3, stride=1, pad=1)
         self.act2 = nne.LeakyReLULayer(0.01) 
+        self.pool2 = nne.MaxPool2dLayer(32, out_h1, out_w1, kernel_size=2, stride=2, pad=0)
+        
         out_h2, out_w2 = out_h1 // 2, out_w1 // 2
+        
+        self.flatten = nne.FlattenLayer()
         self.fc = nne.DenseLayer(32 * out_h2 * out_w2, num_classes)
 
     def forward(self, x):
-        x = self.act1(self.conv1(x))
-        x = self.act2(self.conv2(x))
+        x = self.pool1(self.act1(self.conv1(x)))
+        x = self.pool2(self.act2(self.conv2(x)))
+        x = self.flatten(x)
         return self.fc(x)
 
 def run_classification_benchmark(seeds=[42, 1337, 2026]):

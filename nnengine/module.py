@@ -17,3 +17,12 @@ class Module(_backend.Module):
                 )
             self.register_module(name, value)
         super().__setattr__(name, value)
+
+    def __repr__(self):
+        lines = [f"{self.__class__.__name__}("]
+        for key, val in self.__dict__.items():
+            if hasattr(val, 'parameters') and callable(val): 
+                val_str = repr(val).replace('\n', '\n  ')
+                lines.append(f"  ({key}): {val_str}")
+        lines.append(")")
+        return "\n".join(lines)

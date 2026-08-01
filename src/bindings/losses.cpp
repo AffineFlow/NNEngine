@@ -20,6 +20,8 @@ void bind_losses_and_regs(py::module_& m) {
       .def("forward", &Loss::forward, py::arg("predictions"),
            py::arg("targets"),
            "Bind tensors and compute the forward loss scalar.")
+      .def("__call__", &Loss::forward, py::arg("predictions"),
+           py::arg("targets"), "Alias for forward.")
       .def(
           "backward",
           [](Loss& self, bool retain_graph) {

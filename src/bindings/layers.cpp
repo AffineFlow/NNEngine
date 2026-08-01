@@ -12,7 +12,9 @@
 #include "layers/Conv2dLayer.hpp"
 #include "layers/DenseLayer.hpp"
 #include "layers/DropoutLayer.hpp"
+#include "layers/FlattenLayer.hpp"
 #include "layers/LeakyReLULayer.hpp"
+#include "layers/Pool2dLayer.hpp"
 #include "layers/ReLULayer.hpp"
 
 namespace py = pybind11;
@@ -25,7 +27,8 @@ class PyModule : public Module {
   ~PyModule() override = default;
   affineflow::autograd::Tensor* forward(
       affineflow::autograd::Tensor* input) override {
-    PYBIND11_OVERRIDE_PURE(affineflow::autograd::Tensor*, Module, forward, input);
+    PYBIND11_OVERRIDE_PURE(affineflow::autograd::Tensor*, Module, forward,
+                           input);
   }
 };
 
@@ -158,4 +161,34 @@ void bind_layers(py::module_& m) {
            py::arg("base_filepath"), "Load engine state from disk.")
       .def("set_scheduler", &JITGraph::set_scheduler, py::arg("scheduler"),
            "Attach a learning rate scheduler to the compiled graph.");
+
+  py::class_<MaxPool2dLayer, Layer, std::shared_ptr<MaxPool2dLayer>>(
+      m, "MaxPool2dLayer", "Applies a 2D max pooling over an input signal.")
+      .def(py::init<int, int, int, int, int, int>(), py::arg("channels"),
+           py::arg("in_h"), py::arg("in_w"), py::arg("kernel_size"),
+           py::arg("stride") = 2, py::arg("pad") = 0,
+           "Initialize spatial max pooling.")
+      .def("forward", &MaxPool2dLayer::forward, py::arg("input"),
+           "Apply 2D max pooling.", py::return_value_policy::reference)
+      .def("__call__", &MaxPool2dLayer::forward, py::arg("input"),
+           "Alias for forward.", py::return_value_policy::reference);
+
+  py::class_<AvgPool2dLayer, Layer, std::shared_ptr<AvgPool2dLayer>>(
+      m, "AvgPool2dLayer", "Applies a 2D average pooling over an input signal.")
+      .def(py::init<int, int, int, int, int, int>(), py::arg("channels"),
+           py::arg("in_h"), py::arg("in_w"), py::arg("kernel_size"),
+           py::arg("stride") = 2, py::arg("pad") = 0,
+           "Initialize spatial average pooling.")
+      .def("forward", &AvgPool2dLayer::forward, py::arg("input"),
+           "Apply 2D average pooling.", py::return_value_policy::reference)
+      .def("__call__", &AvgPool2dLayer::forward, py::arg("input"),
+           "Alias for forward.", py::return_value_policy::reference);
+
+  py::class_<FlattenLayer, Layer, std::shared_ptr<FlattenLayer>>(
+      m, "FlattenLayer", "Flattens a contiguous range of dims into a tensor.")
+      .def(py::init<>())
+      .def("forward", &FlattenLayer::forward, py::arg("input"),
+           "Apply flatten.", py::return_value_policy::reference)
+      .def("__call__", &FlattenLayer::forward, py::arg("input"),
+           "Alias for forward.", py::return_value_policy::reference);
 }

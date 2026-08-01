@@ -55,6 +55,7 @@ from .module import Module
 from .compiler import JITCompiler
 from .eager import eager_step
 from .decorator import eager, jit
+from .creation import zeros, ones, randn
 
 # 5. Automatically define __all__ based on what the backend and wrappers provide
 __all__ = [

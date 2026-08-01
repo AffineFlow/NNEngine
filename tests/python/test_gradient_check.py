@@ -74,3 +74,82 @@ def test_conv2d_layer_gradient_accuracy():
     
     rel_error = np.linalg.norm(num_grad_w - analytical_grad_w) / (np.linalg.norm(num_grad_w + analytical_grad_w) + 1e-8)
     assert rel_error < 1e-3, f"Conv2d gradient check failed: {rel_error}"
+
+def compute_numerical_gradient_input(forward_fn, X_np, eps=1e-4):
+    """Numerically approximates the gradient of the loss w.r.t the input tensor."""
+    grad = np.zeros_like(X_np)
+    flat_x = X_np.ravel()
+    flat_grad = grad.ravel()
+    
+    for i in range(len(flat_x)):
+        orig_val = flat_x[i]
+        
+        flat_x[i] = orig_val + eps
+        out_plus = forward_fn(X_np.reshape(X_np.shape))
+        loss_plus = np.sum(out_plus) 
+        
+        flat_x[i] = orig_val - eps
+        out_minus = forward_fn(X_np.reshape(X_np.shape))
+        loss_minus = np.sum(out_minus)
+        
+        flat_grad[i] = (loss_plus - loss_minus) / (2 * eps)
+        flat_x[i] = orig_val
+        
+    return grad
+
+def test_maxpool2d_gradient_accuracy():
+    nne.set_seed(42)
+    layer = nne.MaxPool2dLayer(channels=2, in_h=4, in_w=4, kernel_size=2, stride=2, pad=0)
+    
+    flat_x = np.arange(2 * 2 * 4 * 4, dtype=np.float32) / 64.0
+    np.random.shuffle(flat_x)
+    X_np = flat_x.reshape(2, 2, 4, 4)
+    
+    tape = nne.Tape(record_ops=True)
+    with tape:
+        X_tensor = tape.push_tensor(nne.Tensor(X_np), requires_grad=True)
+        out_tensor = layer(X_tensor)
+        out_tensor.grad[:] = 1.0
+        tape.backward()
+
+    analytical_grad_x = np.array(X_tensor.grad)
+
+    def forward_pass(x_input):
+        eval_tape = nne.Tape(record_ops=False)
+        with eval_tape:
+            out = layer(eval_tape.push_tensor(nne.Tensor(x_input), requires_grad=False))
+            return np.array(out, copy=True)
+
+    num_grad_x = compute_numerical_gradient_input(forward_pass, X_np)
+    
+    rel_error = np.linalg.norm(num_grad_x - analytical_grad_x) / (np.linalg.norm(num_grad_x + analytical_grad_x) + 1e-8)
+    assert rel_error < 1e-3, f"MaxPool2d gradient check failed: {rel_error}"
+
+
+def test_avgpool2d_gradient_accuracy():
+    nne.set_seed(42)
+    layer = nne.AvgPool2dLayer(channels=2, in_h=4, in_w=4, kernel_size=2, stride=2, pad=0)
+    
+    flat_x = np.arange(2 * 2 * 4 * 4, dtype=np.float32) / 64.0
+    X_np = flat_x.reshape(2, 2, 4, 4)
+    
+    tape = nne.Tape(record_ops=True)
+    with tape:
+        X_tensor = tape.push_tensor(nne.Tensor(X_np), requires_grad=True)
+        out_tensor = layer(X_tensor)
+        out_tensor.grad[:] = 1.0
+        tape.backward()
+
+    analytical_grad_x = np.array(X_tensor.grad)
+
+    def forward_pass(x_input):
+        eval_tape = nne.Tape(record_ops=False)
+        with eval_tape:
+            out = layer(eval_tape.push_tensor(nne.Tensor(x_input), requires_grad=False))
+            return np.array(out, copy=True)
+
+    num_grad_x = compute_numerical_gradient_input(forward_pass, X_np, eps=1e-3)
+    
+    rel_error = np.linalg.norm(num_grad_x - analytical_grad_x) / (np.linalg.norm(num_grad_x + analytical_grad_x) + 1e-8)
+    
+    assert rel_error < 5e-3, f"AvgPool2d gradient check failed: {rel_error}"

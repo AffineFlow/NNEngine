@@ -10,7 +10,9 @@ set(ENGINE_SOURCES
     autograd/ops/MulOp.cpp
     autograd/ops/DivOp.cpp
     autograd/ops/BatchNorm1dOp.cpp
+    autograd/ops/Pool2dOp.cpp
     autograd/ops/Conv2dOp.cpp
+    autograd/ops/FlattenOp.cpp
     autograd/ops/DropoutOp.cpp
     autograd/ops/LeakyReLUOp.cpp
     autograd/ops/MatMulOp.cpp
@@ -20,7 +22,9 @@ set(ENGINE_SOURCES
     autograd/ops/ReductionOps.cpp
     autograd/ops/UnaryOps.cpp
     layers/BatchNorm1dLayer.cpp
+    layers/Pool2dLayer.cpp
     layers/Conv2dLayer.cpp
+    layers/FlattenLayer.cpp
     layers/DenseLayer.cpp
     layers/DropoutLayer.cpp
     layers/LeakyReLULayer.cpp
