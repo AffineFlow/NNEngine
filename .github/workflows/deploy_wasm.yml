@@ -9,7 +9,6 @@ on:
       - 'include/**'
   workflow_dispatch:
 
-# Set permissions required for GitHub Pages deployment
 permissions:
   contents: read
   pages: write
@@ -25,6 +24,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+
+      - name: Install Latest CMake
+        uses: lukka/get-cmake@latest
+        with:
+          cmakeVersion: "latest"
 
       - name: Setup Emscripten SDK
         uses: emscripten-core/setup-emsdk@v16
