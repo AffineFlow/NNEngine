@@ -1,0 +1,61 @@
+name: Build and Deploy Wasm Demo
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'web/**'
+      - 'src/**'
+      - 'include/**'
+  workflow_dispatch:
+
+# Set permissions required for GitHub Pages deployment
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Compile C++ to WebAssembly
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Setup Emscripten SDK
+        uses: emscripten-core/setup-emsdk@v16
+        with:
+          version: latest
+
+      - name: Configure CMake with Emscripten
+        run: |
+          emcmake cmake -B build -S web/ -DCMAKE_BUILD_TYPE=Release
+
+      - name: Compile Wasm Binaries
+        run: |
+          cmake --build build --parallel 2
+
+      - name: Copy binaries to web docs directory
+        run: |
+          cp build/nnengine.js web/docs/
+          cp build/nnengine.wasm web/docs/
+
+      - name: Upload artifact for GitHub Pages
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: web/docs
+
+  deploy:
+    name: Deploy to GitHub Pages
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v5

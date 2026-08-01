@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>NNEngine Wasm - Facial Emotion Classifier</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-slate-950 text-white font-sans flex flex-col items-center justify-center min-h-screen">
+    <h1 class="text-3xl font-bold mb-2 text-cyan-400">NNEngine WebAssembly</h1>
+    <p class="text-slate-400 mb-6">Real-time C++ deep learning inference running natively in-browser.</p>
+
+    <div class="flex flex-col md:flex-row gap-6 items-center">
+        <!-- Webcam Feed -->
+        <div class="relative bg-black rounded-lg overflow-hidden border border-slate-800 shadow-2xl">
+            <video id="webcam" autoplay playsinline width="320" height="240" class="transform -scale-x-100"></video>
+            <canvas id="canvas" width="64" height="64" class="hidden"></canvas>
+        </div>
+
+        <!-- Emotion Probabilities Panel -->
+        <div class="bg-slate-900 p-6 rounded-lg border border-slate-800 w-80 shadow-xl">
+            <h2 class="text-xl font-semibold mb-4 text-cyan-400">Emotion Probabilities</h2>
+            <div class="space-y-4">
+                <div>
+                    <div class="flex justify-between text-sm mb-1"><span>Happy 😃</span><span id="happy-val">0%</span>
+                    </div>
+                    <div class="w-full bg-slate-800 h-2 rounded">
+                        <div id="happy-bar" class="bg-cyan-500 h-2 rounded transition-all duration-75"
+                            style="width: 0%"></div>
+                    </div>
+                </div>
+                <div>
+                    <div class="flex justify-between text-sm mb-1"><span>Neutral 😐</span><span
+                            id="neutral-val">0%</span></div>
+                    <div class="w-full bg-slate-800 h-2 rounded">
+                        <div id="neutral-bar" class="bg-cyan-500 h-2 rounded transition-all duration-75"
+                            style="width: 0%"></div>
+                    </div>
+                </div>
+                <div>
+                    <div class="flex justify-between text-sm mb-1"><span>Surprised 😲</span><span
+                            id="surprised-val">0%</span></div>
+                    <div class="w-full bg-slate-800 h-2 rounded">
+                        <div id="surprised-bar" class="bg-cyan-500 h-2 rounded transition-all duration-75"
+                            style="width: 0%"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Load Wasm Glue Code -->
+    <script src="nnengine.js"></script>
+    <script>
+        let classifier;
+        Module.onRuntimeInitialized = async () => {
+            console.log("NNEngine WebAssembly Module Loaded Successfully.");
+            classifier = new Module.WasmClassifier(3);
+            startWebcam();
+        };
+
+        async function startWebcam() {
+            const video = document.getElementById('webcam');
+            const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 320, height: 240 } });
+            video.srcObject = stream;
+            video.addEventListener('play', () => {
+                setInterval(processVideoFrame, 100);
+            });
+        }
+
+        function processVideoFrame() {
+            const video = document.getElementById('webcam');
+            const canvas = document.getElementById('canvas');
+            const ctx = canvas.getContext('2d');
+            
+            ctx.drawImage(video, 0, 0, 64, 64);
+            const imgData = ctx.getImageData(0, 0, 64, 64);
+            
+            const inputFloat = new Float32Array(64 * 64);
+            for (let i = 0; i < imgData.data.length; i += 4) {
+                inputFloat[i / 4] = (imgData.data[i] * 0.299 + imgData.data[i+1] * 0.587 + imgData.data[i+2] * 0.114) / 255.0;
+            }
+
+            if (classifier) {
+                const probs = classifier.predict(inputFloat);
+                
+                const happy = Math.round(probs[0] * 100);
+                const neutral = Math.round(probs[1] * 100);
+                const surprised = Math.round(probs[2] * 100);
+
+                document.getElementById('happy-val').innerText = happy + '%';
+                document.getElementById('happy-bar').style.width = happy + '%';
+                document.getElementById('neutral-val').innerText = neutral + '%';
+                document.getElementById('neutral-bar').style.width = neutral + '%';
+                document.getElementById('surprised-val').innerText = surprised + '%';
+                document.getElementById('surprised-bar').style.width = surprised + '%';
+            }
+        }
+    </script>
+</body>
+
+</html>
