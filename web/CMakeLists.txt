@@ -3,8 +3,23 @@ project(NNEngineWasm)
 
 set(CMAKE_CXX_STANDARD 17)
 
-# Include paths pointing to your project's header structure
+# Include core headers
 include_directories(../include)
+
+# Fetch Eigen
+    set(EIGEN_BUILD_DOC OFF CACHE BOOL "" FORCE)
+    set(BUILD_TESTING OFF CACHE BOOL "" FORCE)
+    
+    FetchContent_Declare(
+        eigen 
+        URL "https://gitlab.com/libeigen/eigen/-/archive/5.0.1/eigen-5.0.1.tar.gz" 
+        SOURCE_SUBDIR ""
+        EXCLUDE_FROM_ALL
+    )
+    FetchContent_MakeAvailable(eigen)
+
+# Add Eigen include directories explicitly
+include_directories(${eigen_SOURCE_DIR})
 
 add_executable(nnengine wasm_wrapper.cpp)
 
