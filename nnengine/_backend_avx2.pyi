@@ -6,7 +6,7 @@ import collections.abc
 import numpy
 import numpy.typing
 import typing
-__all__: list[str] = ['Adam', 'AdamW', 'BatchNorm1dLayer', 'Conv2dLayer', 'DataLoader', 'DenseLayer', 'DropoutLayer', 'JITGraph', 'L2Regularizer', 'Layer', 'LeakyReLULayer', 'Loss', 'MSELoss', 'Module', 'Op', 'Optimizer', 'ReLULayer', 'Regularizer', 'SGD', 'Scheduler', 'SoftmaxCrossEntropyLoss', 'StepLR', 'Tape', 'Tensor', 'no_grad', 'set_seed']
+__all__: list[str] = ['Adam', 'AdamW', 'AvgPool2dLayer', 'BatchNorm1dLayer', 'Conv2dLayer', 'DataLoader', 'DenseLayer', 'DropoutLayer', 'FlattenLayer', 'JITGraph', 'L2Regularizer', 'Layer', 'LeakyReLULayer', 'Loss', 'MSELoss', 'MaxPool2dLayer', 'Module', 'Op', 'Optimizer', 'ReLULayer', 'Regularizer', 'SGD', 'Scheduler', 'SoftmaxCrossEntropyLoss', 'StepLR', 'Tape', 'Tensor', 'no_grad', 'set_seed']
 class Adam(Optimizer):
     """
     Adaptive Moment Estimation optimizer.
@@ -22,6 +22,22 @@ class AdamW(Optimizer):
     def __init__(self, learning_rate: typing.SupportsFloat | typing.SupportsIndex = 0.0010000000474974513, weight_decay: typing.SupportsFloat | typing.SupportsIndex = 0.009999999776482582) -> None:
         """
         Initialize AdamW with learning rate and decay penalty.
+        """
+class AvgPool2dLayer(Layer):
+    """
+    Applies a 2D average pooling over an input signal.
+    """
+    def __call__(self, input: Tensor) -> Tensor:
+        """
+        Alias for forward.
+        """
+    def __init__(self, channels: typing.SupportsInt | typing.SupportsIndex, in_h: typing.SupportsInt | typing.SupportsIndex, in_w: typing.SupportsInt | typing.SupportsIndex, kernel_size: typing.SupportsInt | typing.SupportsIndex, stride: typing.SupportsInt | typing.SupportsIndex = 2, pad: typing.SupportsInt | typing.SupportsIndex = 0) -> None:
+        """
+        Initialize spatial average pooling.
+        """
+    def forward(self, input: Tensor) -> Tensor:
+        """
+        Apply 2D average pooling.
         """
 class BatchNorm1dLayer(Layer):
     """
@@ -106,6 +122,20 @@ class DropoutLayer(Layer):
     def forward(self, input: Tensor) -> Tensor:
         """
         Apply dropout mask.
+        """
+class FlattenLayer(Layer):
+    """
+    Flattens a contiguous range of dims into a tensor.
+    """
+    def __call__(self, input: Tensor) -> Tensor:
+        """
+        Alias for forward.
+        """
+    def __init__(self) -> None:
+        ...
+    def forward(self, input: Tensor) -> Tensor:
+        """
+        Apply flatten.
         """
 class JITGraph:
     """
@@ -195,6 +225,10 @@ class Loss:
     """
     Objective function that produces a scalar training signal.
     """
+    def __call__(self, predictions: Tensor, targets: Tensor) -> float:
+        """
+        Alias for forward.
+        """
     def backward(self, retain_graph: bool = False) -> None:
         """
         Computes the gradient of the loss and triggers backpropagation.
@@ -210,6 +244,22 @@ class MSELoss(Loss):
     def __init__(self) -> None:
         """
         Initialize MSELoss.
+        """
+class MaxPool2dLayer(Layer):
+    """
+    Applies a 2D max pooling over an input signal.
+    """
+    def __call__(self, input: Tensor) -> Tensor:
+        """
+        Alias for forward.
+        """
+    def __init__(self, channels: typing.SupportsInt | typing.SupportsIndex, in_h: typing.SupportsInt | typing.SupportsIndex, in_w: typing.SupportsInt | typing.SupportsIndex, kernel_size: typing.SupportsInt | typing.SupportsIndex, stride: typing.SupportsInt | typing.SupportsIndex = 2, pad: typing.SupportsInt | typing.SupportsIndex = 0) -> None:
+        """
+        Initialize spatial max pooling.
+        """
+    def forward(self, input: Tensor) -> Tensor:
+        """
+        Apply 2D max pooling.
         """
 class Module(Layer):
     """
