@@ -6,7 +6,7 @@ import collections.abc
 import numpy
 import numpy.typing
 import typing
-__all__: list[str] = ['Adam', 'AdamW', 'BatchNorm1dLayer', 'Conv2dLayer', 'DataLoader', 'DenseLayer', 'DropoutLayer', 'JITGraph', 'L2Regularizer', 'Layer', 'LeakyReLULayer', 'Loss', 'MSELoss', 'Module', 'Op', 'Optimizer', 'ReLULayer', 'Regularizer', 'SGD', 'Scheduler', 'SoftmaxCrossEntropyLoss', 'StepLR', 'Tape', 'Tensor', 'set_seed']
+__all__: list[str] = ['Adam', 'AdamW', 'BatchNorm1dLayer', 'Conv2dLayer', 'DataLoader', 'DenseLayer', 'DropoutLayer', 'JITGraph', 'L2Regularizer', 'Layer', 'LeakyReLULayer', 'Loss', 'MSELoss', 'Module', 'Op', 'Optimizer', 'ReLULayer', 'Regularizer', 'SGD', 'Scheduler', 'SoftmaxCrossEntropyLoss', 'StepLR', 'Tape', 'Tensor', 'no_grad', 'set_seed']
 class Adam(Optimizer):
     """
     Adaptive Moment Estimation optimizer.
@@ -195,9 +195,9 @@ class Loss:
     """
     Objective function that produces a scalar training signal.
     """
-    def backward(self) -> None:
+    def backward(self, retain_graph: bool = False) -> None:
         """
-        Explicitly seed the gradient into the prediction tensor.
+        Computes the gradient of the loss and triggers backpropagation.
         """
     def forward(self, predictions: Tensor, targets: Tensor) -> float:
         """
@@ -453,7 +453,7 @@ class Tensor:
     @typing.overload
     def __truediv__(self, val: typing.SupportsFloat | typing.SupportsIndex) -> typing.Any:
         ...
-    def backward(self) -> None:
+    def backward(self, retain_graph: bool = False) -> None:
         """
         Computes the gradient of current tensor w.r.t. graph leaves.
         """
@@ -511,6 +511,16 @@ class Tensor:
         """
     @shape.setter
     def shape(self, arg1: collections.abc.Sequence[typing.SupportsInt | typing.SupportsIndex]) -> None:
+        ...
+class no_grad:
+    """
+    Context-manager that disables gradient calculation.
+    """
+    def __enter__(self) -> None:
+        ...
+    def __exit__(self, *args) -> None:
+        ...
+    def __init__(self) -> None:
         ...
 def set_seed(seed: typing.SupportsInt | typing.SupportsIndex) -> None:
     """
