@@ -3,50 +3,61 @@
 
 #include "core/Types.hpp"
 
-namespace affineengine::autograd {
+namespace affineflow::autograd {
 
 struct Tensor {
-  affineengine::FlatStorage data;
-  affineengine::FlatStorage grad;
-  affineengine::Shape shape;
+  affineflow::FlatStorage data;
+  affineflow::FlatStorage grad;
+  affineflow::Shape shape;
   bool requires_grad;
   bool apply_regularization;
 
-  Tensor(const affineengine::Shape& init_shape, bool req_grad = true,
+  Tensor(const affineflow::Shape& init_shape, bool req_grad = true,
          bool apply_reg = false)
       : shape(init_shape),
         requires_grad(req_grad),
         apply_regularization(apply_reg) {
-    Eigen::Index total_size = affineengine::compute_size(shape);
-    data = affineengine::FlatStorage(total_size);
+    Eigen::Index total_size = affineflow::compute_size(shape);
+    data = affineflow::FlatStorage(total_size);
     data.setZero();
 
     if (requires_grad) {
-      grad = affineengine::FlatStorage(total_size);
+      grad = affineflow::FlatStorage(total_size);
       grad.setZero();
     }
   }
 
-  bool has_shape(const affineengine::Shape& target) const {
+  bool has_shape(const affineflow::Shape& target) const {
     return shape == target;
   }
 
-  void resize(const affineengine::Shape& new_shape) {
-    if (has_shape(new_shape)) return;
-    shape = new_shape;
-    Eigen::Index total_size = affineengine::compute_size(shape);
-    data = affineengine::FlatStorage(total_size);
-    if (requires_grad) {
-      grad = affineengine::FlatStorage(total_size);
+  // Safely provisions the gradient buffer if it is missing
+  void allocate_grad() {
+    if (grad.size() != data.size()) {
+      grad = affineflow::FlatStorage(data.dimensions());
       grad.setZero();
+    }
+  }
+
+  void resize(const affineflow::Shape& new_shape) {
+    if (!has_shape(new_shape)) {
+      shape = new_shape;
+      Eigen::Index total_size = affineflow::compute_size(shape);
+      data = affineflow::FlatStorage(total_size);
+      if (requires_grad) {
+        allocate_grad();
+      }
+    } else if (requires_grad) {
+      allocate_grad();
     }
   }
 
   void zero_grad() {
     if (requires_grad) {
+      allocate_grad();
       grad.setZero();
     }
   }
 };
 
-}  // namespace affineengine::autograd
+}  // namespace affineflow::autograd

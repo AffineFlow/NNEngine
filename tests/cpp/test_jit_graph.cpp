@@ -9,8 +9,8 @@
 #include "losses/MSELoss.hpp"
 #include "optimizers/SGD.hpp"
 
-using namespace affineengine;
-using namespace affineengine::autograd;
+using namespace affineflow;
+using namespace affineflow::autograd;
 
 TEST(JITGraphTest, TraceAndExecuteBatch) {
   auto dense = std::make_shared<layers::DenseLayer>(4, 4);

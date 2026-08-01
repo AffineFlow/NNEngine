@@ -4,7 +4,7 @@
 
 #include "core/Random.hpp"
 
-namespace affineengine::autograd::ops {
+namespace affineflow::autograd::ops {
 DropoutOp::DropoutOp(Tensor* a, Tensor* out, float p, const bool* is_training)
     : a_(a), out_(out), p_(p), is_training_(is_training) {}
 
@@ -27,7 +27,7 @@ void DropoutOp::forward() {
         (Eigen::ArrayXf::Random(a_->data.size()) < threshold).cast<float>() *
         scale;
 
-    Eigen::TensorMap<affineengine::FlatStorage> mask_map(mask_.data(),
+    Eigen::TensorMap<affineflow::FlatStorage> mask_map(mask_.data(),
                                                      a_->data.dimensions());
     out_->data = a_->data * mask_map;
   }
@@ -36,11 +36,11 @@ void DropoutOp::forward() {
 void DropoutOp::backward() {
   if (!a_->requires_grad) return;
   if (*is_training_) {
-    Eigen::TensorMap<affineengine::FlatStorage> mask_map(mask_.data(),
+    Eigen::TensorMap<affineflow::FlatStorage> mask_map(mask_.data(),
                                                      a_->data.dimensions());
     a_->grad += out_->grad * mask_map;
   } else {
     a_->grad += out_->grad;
   }
 }
-}  // namespace affineengine::autograd::ops
+}  // namespace affineflow::autograd::ops

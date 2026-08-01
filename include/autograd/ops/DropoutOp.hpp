@@ -3,13 +3,13 @@
 #include "autograd/Op.hpp"
 #include "autograd/Tensor.hpp"
 
-namespace affineengine::autograd::ops {
+namespace affineflow::autograd::ops {
 
 class DropoutOp : public Op {
   Tensor *a_, *out_;
   float p_;
   const bool* is_training_;
-  affineengine::FlatStorage mask_;
+  affineflow::FlatStorage mask_;
 
  public:
   DropoutOp(Tensor* a, Tensor* out, float p, const bool* is_training);
@@ -18,4 +18,4 @@ class DropoutOp : public Op {
   void backward() override;
 };
 
-}  // namespace affineengine::autograd::ops
+}  // namespace affineflow::autograd::ops

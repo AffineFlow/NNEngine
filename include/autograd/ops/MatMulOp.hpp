@@ -2,7 +2,7 @@
 #include "autograd/Op.hpp"
 #include "autograd/Tensor.hpp"
 
-namespace affineengine::autograd::ops {
+namespace affineflow::autograd::ops {
 
 /**
  * @brief Matrix multiplication primitive for dense layers.
@@ -28,4 +28,4 @@ class MatMulOp : public Op {
   void backward() override;
 };
 
-}  // namespace affineengine::autograd::ops
+}  // namespace affineflow::autograd::ops

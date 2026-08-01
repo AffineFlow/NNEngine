@@ -5,7 +5,7 @@
 #include "autograd/Tensor.hpp"
 #include "core/Regularizer.hpp"
 
-namespace affineengine::core {
+namespace affineflow::core {
 
 /**
  * @brief L2 weight decay regularizer.
@@ -28,4 +28,4 @@ class L2Regularizer : public Regularizer {
   float apply(const std::vector<autograd::Tensor*>& parameters) override;
 };
 
-}  // namespace affineengine::core
+}  // namespace affineflow::core

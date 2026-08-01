@@ -7,13 +7,13 @@
 #include "autograd/ops/Conv2dOp.hpp"
 #include "core/Random.hpp"
 
-namespace affineengine::layers {
+namespace affineflow::layers {
 
 Conv2dLayer::Conv2dLayer(int in_channels, int out_channels, int in_h, int in_w,
                          int kernel_size, int stride, int pad)
-    : w_(affineengine::Shape{out_channels, in_channels * kernel_size * kernel_size},
+    : w_(affineflow::Shape{out_channels, in_channels * kernel_size * kernel_size},
          true),
-      bias_(affineengine::Shape{1, out_channels}, true),
+      bias_(affineflow::Shape{1, out_channels}, true),
       in_channels_(in_channels),
       out_channels_(out_channels),
       in_h_(in_h),
@@ -47,10 +47,10 @@ autograd::Tensor* Conv2dLayer::forward(autograd::Tensor* input) {
   int out_h = (in_h_ + 2 * pad_ - kernel_size_) / stride_ + 1;
   int out_w = (in_w_ + 2 * pad_ - kernel_size_) / stride_ + 1;
   auto* out = tape->alloc_tensor(
-      affineengine::Shape{input->shape[0], out_channels_ * out_h * out_w},
+      affineflow::Shape{input->shape[0], out_channels_ * out_h * out_w},
       req_grad);
 
-  auto* op = tape->allocate_op<affineengine::autograd::ops::Conv2dOp>(
+  auto* op = tape->allocate_op<affineflow::autograd::ops::Conv2dOp>(
       input, &w_, &bias_, out, in_channels_, out_channels_, in_h_, in_w_,
       kernel_size_, stride_, pad_);
   op->forward();
@@ -66,4 +66,4 @@ std::map<std::string, autograd::Tensor*> Conv2dLayer::named_parameters() {
   return {{"weight", &w_}, {"bias", &bias_}};
 }
 
-}  // namespace affineengine::layers
+}  // namespace affineflow::layers

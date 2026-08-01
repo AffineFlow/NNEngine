@@ -8,7 +8,7 @@
 #include "autograd/Tensor.hpp"
 #include "core/Layer.hpp"
 
-namespace affineengine::core {
+namespace affineflow::core {
 
 class Module : public Layer {
  protected:
@@ -30,4 +30,4 @@ class Module : public Layer {
   void load_weights(const std::string& filepath);
 };
 
-}  // namespace affineengine::core
+}  // namespace affineflow::core

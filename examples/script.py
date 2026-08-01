@@ -167,7 +167,7 @@ def run_regression_benchmark(seeds=[42, 1337, 2026]):
             best_nn_results = (nn_mse, nn_r2, nn_time)
     nn_mse, nn_r2, nn_time = best_nn_results
 
-    # --- 4. NNEngine Eager (Now Fair!) ---
+    # --- 4. NNEngine Eager (PyTorch-like Implicit Execution) ---
     print("Evaluating NNEngine (Eager) across seeds...")
     best_eag_mse = float("inf")
     best_eag_results = None
@@ -179,10 +179,6 @@ def run_regression_benchmark(seeds=[42, 1337, 2026]):
         eag_opt.set_parameters(eag_model.parameters())
         eag_loss = nne.MSELoss()
         eag_reg = nne.L2Regularizer(l2=weight_decay)
-        
-        @nne.eager(optimizer=eag_opt, loss_fn=eag_loss, regularizer=eag_reg)
-        def train_step(mod, x):
-            return mod(x)
             
         eag_loader = nne.DataLoader(X_train_s, y_train, batch_size=batch_size, shuffle=True, drop_last=True)
         
@@ -195,9 +191,26 @@ def run_regression_benchmark(seeds=[42, 1337, 2026]):
             eag_loader.reset()
             while eag_loader.has_next():
                 eag_loader.next_batch(bx, by)
-                train_step(eag_model, bx, by)
+                
+                # 1. Zero out previous gradients
+                eag_opt.zero_grad()
+                
+                # 2. Forward pass implicitly constructs the graph natively
+                preds = eag_model(bx)
+                loss = eag_loss.forward(preds, by)
+                
+                # 3. Triggers C++ backprop and auto-resets the internal arena
+                eag_loss.backward()
+                
+                # Apply regularization natively
+                eag_reg.apply(eag_model.parameters())
+                
+                # 4. Update parameters
+                eag_opt.step()
+                
         eag_time = time.perf_counter() - t0
         
+        # predict() inherently uses no_grad natively
         eag_preds = np.array(eag_model.predict(X_test_s))
         eag_mse = mean_squared_error(y_test, eag_preds)
         eag_r2 = r2_score(y_test, eag_preds)
@@ -332,7 +345,7 @@ def run_classification_benchmark(seeds=[42, 1337, 2026]):
             best_nn_results = (nn_acc, nn_time)
     nn_acc, nn_time = best_nn_results
 
-    # --- 3. NNEngine Eager ---
+    # --- 3. NNEngine Eager (PyTorch-like Implicit Execution) ---
     print("Evaluating NNEngine (Eager) across seeds...")
     best_eag_acc = -1.0
     best_eag_results = None
@@ -344,10 +357,6 @@ def run_classification_benchmark(seeds=[42, 1337, 2026]):
         eag_opt.set_parameters(eag_model.parameters())
         eag_loss = nne.SoftmaxCrossEntropyLoss()
         
-        @nne.eager(optimizer=eag_opt, loss_fn=eag_loss)
-        def train_step(mod, x):
-            return mod(x)
-            
         eag_loader = nne.DataLoader(X_train_cnn, y_train_onehot, batch_size=batch_size, shuffle=True, drop_last=True)
         
         bx = nne.Tensor(np.zeros((batch_size, 1, img_h, img_w), dtype=np.float32))
@@ -359,7 +368,14 @@ def run_classification_benchmark(seeds=[42, 1337, 2026]):
             eag_loader.reset()
             while eag_loader.has_next():
                 eag_loader.next_batch(bx, by)
-                train_step(eag_model, bx, by)
+                
+                # New implicit UX
+                eag_opt.zero_grad()
+                preds = eag_model(bx)
+                loss = eag_loss.forward(preds, by)
+                eag_loss.backward()
+                eag_opt.step()
+                
         eag_time = time.perf_counter() - t0
         
         eag_preds = np.argmax(np.array(eag_model.predict(X_test_cnn)), axis=1)

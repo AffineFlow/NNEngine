@@ -2,7 +2,9 @@
 #include <pybind11/stl.h>
 
 #include <memory>
+#include <stdexcept>
 
+#include "autograd/Tape.hpp"
 #include "core/Loss.hpp"
 #include "core/Regularizer.hpp"
 #include "losses/MSELoss.hpp"
@@ -10,7 +12,7 @@
 #include "regularizers/L2Regularizer.hpp"
 
 namespace py = pybind11;
-using namespace affineengine::core;
+using namespace affineflow::core;
 
 void bind_losses_and_regs(py::module_& m) {
   py::class_<Loss, std::shared_ptr<Loss>>(
@@ -18,8 +20,23 @@ void bind_losses_and_regs(py::module_& m) {
       .def("forward", &Loss::forward, py::arg("predictions"),
            py::arg("targets"),
            "Bind tensors and compute the forward loss scalar.")
-      .def("backward", &Loss::backward,
-           "Explicitly seed the gradient into the prediction tensor.");
+      .def(
+          "backward",
+          [](Loss& self, bool retain_graph) {
+            auto* tape = affineflow::autograd::Tape::get_global();
+            if (!tape)
+              throw std::runtime_error("No active autograd context found.");
+
+            self.backward();
+            tape->backward();
+
+            if (!retain_graph) {
+              tape->reset();
+            }
+          },
+          py::arg("retain_graph") = false,
+          "Computes the gradient of the loss and triggers backpropagation.",
+          py::call_guard<py::gil_scoped_release>());
 
   py::class_<MSELoss, Loss, std::shared_ptr<MSELoss>>(
       m, "MSELoss", "Mean-squared-error objective for regression.")

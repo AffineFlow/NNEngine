@@ -6,7 +6,7 @@
 
 #include "core/Random.hpp"
 
-namespace affineengine::core {
+namespace affineflow::core {
 
 DataLoader::DataLoader(const autograd::Tensor& X, const autograd::Tensor& y,
                        size_t batch_size, bool shuffle, bool drop_last)
@@ -42,20 +42,20 @@ void DataLoader::next_batch(autograd::Tensor& X_batch,
   size_t remaining = indices_.size() - current_idx_;
   size_t actual_batch_size = std::min(batch_size_, remaining);
 
-  affineengine::Shape expected_x = X_.shape;
+  affineflow::Shape expected_x = X_.shape;
   expected_x[0] = actual_batch_size;
   if (X_batch.shape != expected_x) {
     X_batch.resize(expected_x);
   }
 
-  affineengine::Shape expected_y = y_.shape;
+  affineflow::Shape expected_y = y_.shape;
   expected_y[0] = actual_batch_size;
   if (y_batch.shape != expected_y) {
     y_batch.resize(expected_y);
   }
 
-  Eigen::Index x_row_size = affineengine::compute_size(X_.shape) / X_.shape[0];
-  Eigen::Index y_row_size = affineengine::compute_size(y_.shape) / y_.shape[0];
+  Eigen::Index x_row_size = affineflow::compute_size(X_.shape) / X_.shape[0];
+  Eigen::Index y_row_size = affineflow::compute_size(y_.shape) / y_.shape[0];
 
   for (size_t i = 0; i < actual_batch_size; ++i) {
     std::copy_n(X_.data.data() + (indices_[current_idx_ + i] * x_row_size),
@@ -66,4 +66,4 @@ void DataLoader::next_batch(autograd::Tensor& X_batch,
   current_idx_ += actual_batch_size;
 }
 
-}  // namespace affineengine::core
+}  // namespace affineflow::core

@@ -2,7 +2,7 @@
 
 #include <stdexcept>
 
-namespace affineengine::autograd::ops {
+namespace affineflow::autograd::ops {
 void DivOp::forward() {
   if (a_->shape != b_->shape)
     throw std::invalid_argument("DivOp shape mismatch");
@@ -15,4 +15,4 @@ void DivOp::backward() {
   if (b_->requires_grad)
     b_->grad -= out_->grad * a_->data / (b_->data * b_->data);
 }
-}  // namespace affineengine::autograd::ops
+}  // namespace affineflow::autograd::ops

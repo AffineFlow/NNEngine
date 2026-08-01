@@ -4,7 +4,7 @@
 #include "autograd/Tensor.hpp"
 #include "core/Layer.hpp"
 
-namespace affineengine::layers {
+namespace affineflow::layers {
 
 /**
  * @brief Fully connected affine layer with learned weights and bias.
@@ -46,4 +46,4 @@ class DenseLayer : public core::Layer {
   autograd::Tensor bias_;
 };
 
-}  // namespace affineengine::layers
+}  // namespace affineflow::layers

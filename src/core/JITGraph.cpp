@@ -6,7 +6,7 @@
 
 #include "core/Module.hpp"
 
-namespace affineengine::core {
+namespace affineflow::core {
 
 JITGraph::JITGraph(std::shared_ptr<Layer> model,
                    std::shared_ptr<Optimizer> optimizer,
@@ -51,8 +51,8 @@ float JITGraph::trace_batch(DataLoader& dataloader) {
   tape_ = std::make_shared<autograd::Tape>(true);
   autograd::TapeGuard guard(tape_.get());
 
-  autograd::Tensor X_batch(affineengine::Shape{0});
-  autograd::Tensor y_batch(affineengine::Shape{0});
+  autograd::Tensor X_batch(affineflow::Shape{0});
+  autograd::Tensor y_batch(affineflow::Shape{0});
   dataloader.next_batch(X_batch, y_batch);
 
   X_input_ = tape_->push_tensor(X_batch, false);
@@ -117,7 +117,7 @@ void JITGraph::fast_fit(DataLoader& dataloader, DataLoader* val_dataloader,
                         bool verbose) {
   float best_loss = std::numeric_limits<float>::infinity();
   int no_improvement_count = 0;
-  std::vector<affineengine::FlatStorage> best_weights;
+  std::vector<affineflow::FlatStorage> best_weights;
 
   for (int epoch = 0; epoch < epochs; ++epoch) {
     dataloader.reset();
@@ -221,4 +221,4 @@ void JITGraph::load_checkpoint(const std::string& base_filepath) {
   std::ifstream is(base_filepath + ".opt.nne", std::ios::binary);
   if (is) optimizer_->load_state(is);
 }
-}  // namespace affineengine::core
+}  // namespace affineflow::core

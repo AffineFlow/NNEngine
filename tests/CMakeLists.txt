@@ -17,6 +17,7 @@ add_executable(nne_tests
     cpp/test_eager_tape.cpp
     cpp/test_dataloader.cpp
     cpp/test_jit_graph.cpp
+    cpp/test_implicit_tape.cpp
 )
 
 target_link_libraries(nne_tests PRIVATE NNEngine::Core GTest::gtest_main)

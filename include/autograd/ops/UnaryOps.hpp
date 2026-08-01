@@ -2,7 +2,7 @@
 #include "autograd/Op.hpp"
 #include "autograd/Tensor.hpp"
 
-namespace affineengine::autograd::ops {
+namespace affineflow::autograd::ops {
 
 class ExpOp : public Op {
   Tensor *a_, *out_;
@@ -22,4 +22,4 @@ class LogOp : public Op {
   void backward() override;
 };
 
-}  // namespace affineengine::autograd::ops
+}  // namespace affineflow::autograd::ops

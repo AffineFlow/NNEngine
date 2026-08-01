@@ -1,7 +1,7 @@
 #pragma once
 #include "core/Layer.hpp"
 
-namespace affineengine::layers {
+namespace affineflow::layers {
 
 /**
  * @brief Randomly zeroes some of the elements of the input tensor.
@@ -19,4 +19,4 @@ class DropoutLayer : public core::Layer {
   autograd::Tensor* forward(autograd::Tensor* input) override;
 };
 
-}  // namespace affineengine::layers
+}  // namespace affineflow::layers

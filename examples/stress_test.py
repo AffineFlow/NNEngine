@@ -110,10 +110,6 @@ def run_heavy_regression(seeds=[42]):
     eag_opt = nne.Adam(learning_rate=lr)
     eag_opt.set_parameters(eag_model.parameters())
     eag_loss = nne.MSELoss()
-    
-    @nne.eager(optimizer=eag_opt, loss_fn=eag_loss)
-    def train_step(mod, x):
-        return mod(x)
         
     eag_loader = nne.DataLoader(X_train_s, y_train, batch_size=batch_size, shuffle=True, drop_last=True)
     
@@ -126,13 +122,21 @@ def run_heavy_regression(seeds=[42]):
         eag_loader.reset()
         while eag_loader.has_next():
             eag_loader.next_batch(bx, by)
-            train_step(eag_model, bx, by)
+            
+            # New implicit UX
+            eag_opt.zero_grad()
+            preds = eag_model(bx)
+            loss = eag_loss.forward(preds, by)
+            eag_loss.backward()
+            eag_opt.step()
+            
     eag_time = time.perf_counter() - t0
 
     print("\n--- Heavy MLP Results ---")
     print(f"PyTorch      | Time: {pt_time:.4f}s")
     print(f"NNEngine JIT | Time: {nn_time:.4f}s")
     print(f"NNEngine Eag | Time: {eag_time:.4f}s")
+
 
 # ==========================================
 # TASK 2: HEAVY CNN (3 CHANNELS, 3 CONV LAYERS)
@@ -238,10 +242,6 @@ def run_heavy_cnn(seeds=[42]):
     eag_opt = nne.Adam(learning_rate=lr)
     eag_opt.set_parameters(eag_model.parameters())
     eag_loss = nne.SoftmaxCrossEntropyLoss()
-    
-    @nne.eager(optimizer=eag_opt, loss_fn=eag_loss)
-    def train_step(mod, x):
-        return mod(x)
         
     eag_loader = nne.DataLoader(X_train_cnn, y_train_onehot, batch_size=batch_size, shuffle=True, drop_last=True)
     bx = nne.Tensor(np.zeros((batch_size, channels, img_h, img_w), dtype=np.float32))
@@ -253,7 +253,14 @@ def run_heavy_cnn(seeds=[42]):
         eag_loader.reset()
         while eag_loader.has_next():
             eag_loader.next_batch(bx, by)
-            train_step(eag_model, bx, by)
+            
+            # New implicit UX
+            eag_opt.zero_grad()
+            preds = eag_model(bx)
+            loss = eag_loss.forward(preds, by)
+            eag_loss.backward()
+            eag_opt.step()
+            
     eag_time = time.perf_counter() - t0
 
     print("\n--- Heavy CNN Results ---")

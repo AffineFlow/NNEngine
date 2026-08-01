@@ -7,7 +7,7 @@
 #include "autograd/Tensor.hpp"
 #include "core/Layer.hpp"
 
-namespace affineengine::layers {
+namespace affineflow::layers {
 
 /**
  * @brief Applies Batch Normalization over a 1D input tensor.
@@ -33,4 +33,4 @@ class BatchNorm1dLayer : public core::Layer {
   std::map<std::string, autograd::Tensor*> named_parameters() override;
 };
 
-}  // namespace affineengine::layers
+}  // namespace affineflow::layers

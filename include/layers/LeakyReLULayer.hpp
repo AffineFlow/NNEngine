@@ -1,7 +1,7 @@
 #pragma once
 #include "core/Layer.hpp"
 
-namespace affineengine::layers {
+namespace affineflow::layers {
 
 /**
  * @brief Elementwise leaky rectified linear activation.
@@ -20,4 +20,4 @@ class LeakyReLULayer : public core::Layer {
   autograd::Tensor* forward(autograd::Tensor* input) override;
 };
 
-}  // namespace affineengine::layers
+}  // namespace affineflow::layers

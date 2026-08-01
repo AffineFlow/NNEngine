@@ -7,16 +7,6 @@ from . import _backend
 
 F = TypeVar("F", bound=Callable[..., Any])
 
-_THREAD_LOCAL_TAPE: _backend.Tape | None = None
-
-
-def get_eager_tape() -> _backend.Tape:
-    global _THREAD_LOCAL_TAPE
-    if _THREAD_LOCAL_TAPE is None:
-        _THREAD_LOCAL_TAPE = _backend.Tape(record_ops=True)
-    return _THREAD_LOCAL_TAPE
-
-
 def eager_step(
     optimizer: _backend.Optimizer,
     loss_fn: _backend.Loss,
@@ -30,26 +20,26 @@ def eager_step(
             y_batch: Any,
             *args: Any,
             **kwargs: Any,
-        ) -> _backend.Tensor:
-            tape = get_eager_tape()
-            tape.reset()
+        ) -> float:
             optimizer.zero_grad()
 
-            with tape:
-                x_tensor = tape.push_tensor(x_batch, False)
-                y_tensor = tape.push_tensor(y_batch, False)
+            x_tensor = _backend.Tensor(x_batch)
+            x_tensor.requires_grad = False
+            y_tensor = _backend.Tensor(y_batch)
+            y_tensor.requires_grad = False
 
-                predictions = fn(model, x_tensor, *args, **kwargs)
-                loss_val = loss_fn.forward(predictions, y_tensor)
-                loss_fn.backward()
-                tape.backward()
+            predictions = fn(model, x_tensor, *args, **kwargs)
+            loss_val = loss_fn.forward(predictions, y_tensor)
+            
+            # Triggers C++ backpropagation and tape reset
+            loss_fn.backward()
 
-                if regularizer is not None:
-                    loss_val += regularizer.apply(model.parameters())
+            if regularizer is not None:
+                loss_val += regularizer.apply(model.parameters())
 
             optimizer.step()
             return loss_val
 
-        return wrapper  # type: ignore[return-value]
+        return wrapper
 
     return decorator

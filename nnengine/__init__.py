@@ -53,7 +53,7 @@ for _name in dir(_backend):
 # 4. Import your Python-side extensions
 from .module import Module
 from .compiler import JITCompiler
-from .eager import eager_step, get_eager_tape
+from .eager import eager_step
 from .decorator import eager, jit
 
 # 5. Automatically define __all__ based on what the backend and wrappers provide

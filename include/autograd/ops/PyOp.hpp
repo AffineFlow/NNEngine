@@ -4,7 +4,7 @@
 
 #include "autograd/Op.hpp"
 
-namespace affineengine::autograd::ops {
+namespace affineflow::autograd::ops {
 
 /**
  * @brief Python trampoline that forwards virtual calls into Python overrides.
@@ -12,17 +12,17 @@ namespace affineengine::autograd::ops {
  * Python users can inherit from Op to define custom forward/backward passes
  * while still participating in the native tape replay loop.
  */
-class PyOp : public affineengine::autograd::Op {
+class PyOp : public affineflow::autograd::Op {
  public:
-  using affineengine::autograd::Op::Op;
+  using affineflow::autograd::Op::Op;
 
   void forward() override {
-    PYBIND11_OVERRIDE_PURE(void, affineengine::autograd::Op, forward);
+    PYBIND11_OVERRIDE_PURE(void, affineflow::autograd::Op, forward);
   }
 
   void backward() override {
-    PYBIND11_OVERRIDE_PURE(void, affineengine::autograd::Op, backward);
+    PYBIND11_OVERRIDE_PURE(void, affineflow::autograd::Op, backward);
   }
 };
 
-}  // namespace affineengine::autograd::ops
+}  // namespace affineflow::autograd::ops

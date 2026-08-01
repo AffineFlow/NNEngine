@@ -2,7 +2,7 @@
 
 #include <Eigen/Core>
 
-namespace affineengine::autograd::ops {
+namespace affineflow::autograd::ops {
 
 void SumOp::forward() {
   if (!out_->has_shape({1})) out_->resize({1});
@@ -30,4 +30,4 @@ void MeanOp::backward() {
   }
 }
 
-}  // namespace affineengine::autograd::ops
+}  // namespace affineflow::autograd::ops

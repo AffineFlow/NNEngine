@@ -3,7 +3,7 @@
 #include <omp.h>
 #endif
 
-namespace affineengine::autograd::ops {
+namespace affineflow::autograd::ops {
 namespace {
 void im2col(const float* data_im, int channels, int height, int width,
             int kernel_h, int kernel_w, int pad_h, int pad_w, int stride_h,
@@ -78,7 +78,7 @@ void Conv2dOp::forward() {
   int col_rows = in_channels_ * kernel_size_ * kernel_size_;
   int col_cols = out_h * out_w;
 
-  affineengine::Shape out_shape = {batch, out_channels_ * col_cols};
+  affineflow::Shape out_shape = {batch, out_channels_ * col_cols};
   if (!out_->has_shape(out_shape)) out_->resize(out_shape);
 
   if (batch > max_batch_) {
@@ -208,4 +208,4 @@ void Conv2dOp::backward() {
     }
   }
 }
-}  // namespace affineengine::autograd::ops
+}  // namespace affineflow::autograd::ops

@@ -3,7 +3,7 @@
 #include <algorithm>
 #include <stdexcept>
 
-namespace affineengine::autograd {
+namespace affineflow::autograd {
 
 Tape*& Tape::global_tape() {
   static thread_local Tape* current = nullptr;
@@ -13,8 +13,10 @@ Tape*& Tape::global_tape() {
 void Tape::set_global(Tape* t) { global_tape() = t; }
 
 Tape* Tape::get_global() {
-  Tape* t = global_tape();
-  if (!t) throw std::runtime_error("No active tape context.");
+  Tape*& t = global_tape();
+  if (!t) {
+    t = new Tape(true);
+  }
   return t;
 }
 
@@ -30,7 +32,8 @@ Tape::~Tape() {
   }
 }
 
-Tensor* Tape::alloc_tensor(const affineengine::Shape& shape, bool requires_grad) {
+Tensor* Tape::alloc_tensor(const affineflow::Shape& shape,
+                           bool requires_grad) {
   bool req_grad_actual = record_ops_ && requires_grad;
 
   if (tensor_idx_ >= tensor_pool_.size()) {
@@ -39,6 +42,7 @@ Tensor* Tape::alloc_tensor(const affineengine::Shape& shape, bool requires_grad)
     tensor_pool_[tensor_idx_].requires_grad = req_grad_actual;
     tensor_pool_[tensor_idx_].resize(shape);
     if (req_grad_actual) {
+      tensor_pool_[tensor_idx_].allocate_grad();
       tensor_pool_[tensor_idx_].grad.setZero();
     }
   }
@@ -97,4 +101,19 @@ TapeGuard::TapeGuard(Tape* new_tape) {
 
 TapeGuard::~TapeGuard() { Tape::set_global(prev_tape_); }
 
-}  // namespace affineengine::autograd
+void NoGradGuard::enter() {
+  Tape* t = Tape::global_tape();
+  if (t) {
+    prev_state_ = t->record_ops_;
+    t->record_ops_ = false;
+  }
+}
+
+void NoGradGuard::exit() {
+  Tape* t = Tape::global_tape();
+  if (t) {
+    t->record_ops_ = prev_state_;
+  }
+}
+
+}  // namespace affineflow::autograd

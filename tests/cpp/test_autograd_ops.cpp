@@ -6,11 +6,12 @@
 #include "autograd/ops/AddOp.hpp"
 #include "autograd/ops/MulOp.hpp"
 
-using namespace affineengine;
-using namespace affineengine::autograd;
+using namespace affineflow;
+using namespace affineflow::autograd;
 
 TEST(AutogradTest, TapeContextManagement) {
-  EXPECT_THROW(Tape::get_global(), std::runtime_error);
+  // Implicitly initializes
+  EXPECT_NE(Tape::get_global(), nullptr);
 
   {
     Tape tape(true);
@@ -18,7 +19,8 @@ TEST(AutogradTest, TapeContextManagement) {
     EXPECT_EQ(Tape::get_global(), &tape);
   }
 
-  EXPECT_THROW(Tape::get_global(), std::runtime_error);
+  // Returns to the implicit thread-local tape
+  EXPECT_NE(Tape::get_global(), nullptr);
 }
 
 TEST(AutogradTest, TapeNodeRecording) {

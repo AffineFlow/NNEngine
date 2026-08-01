@@ -1,11 +1,11 @@
 #include "autograd/ops/MatMulOp.hpp"
 
-namespace affineengine::autograd::ops {
+namespace affineflow::autograd::ops {
 using MatrixMap = Eigen::Map<
     Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>>;
 
 void MatMulOp::forward() {
-  affineengine::Shape out_shape = {a_->shape[0], b_->shape[1]};
+  affineflow::Shape out_shape = {a_->shape[0], b_->shape[1]};
   if (!out_->has_shape(out_shape)) out_->resize(out_shape);
 
   MatrixMap A_mat(a_->data.data(), a_->shape[0], a_->shape[1]);
@@ -29,4 +29,4 @@ void MatMulOp::backward() {
     dB_mat.noalias() += A_mat.transpose() * dOut_mat;
   }
 }
-}  // namespace affineengine::autograd::ops
+}  // namespace affineflow::autograd::ops

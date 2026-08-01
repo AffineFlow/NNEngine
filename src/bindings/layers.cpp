@@ -16,16 +16,16 @@
 #include "layers/ReLULayer.hpp"
 
 namespace py = pybind11;
-using namespace affineengine::core;
-using namespace affineengine::layers;
+using namespace affineflow::core;
+using namespace affineflow::layers;
 
 class PyModule : public Module {
  public:
   using Module::Module;
   ~PyModule() override = default;
-  affineengine::autograd::Tensor* forward(
-      affineengine::autograd::Tensor* input) override {
-    PYBIND11_OVERRIDE_PURE(affineengine::autograd::Tensor*, Module, forward, input);
+  affineflow::autograd::Tensor* forward(
+      affineflow::autograd::Tensor* input) override {
+    PYBIND11_OVERRIDE_PURE(affineflow::autograd::Tensor*, Module, forward, input);
   }
 };
 

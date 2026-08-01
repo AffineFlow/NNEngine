@@ -4,7 +4,7 @@
 
 #include "autograd/Tensor.hpp"
 
-namespace affineengine::core {
+namespace affineflow::core {
 
 /**
  * @brief Penalty term applied to trainable parameters during optimization.
@@ -21,4 +21,4 @@ class Regularizer {
   virtual float apply(const std::vector<autograd::Tensor*>& parameters) = 0;
 };
 
-}  // namespace affineengine::core
+}  // namespace affineflow::core

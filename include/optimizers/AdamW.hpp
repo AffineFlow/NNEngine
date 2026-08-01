@@ -7,11 +7,11 @@
 #include "core/Optimizer.hpp"
 #include "core/Types.hpp"
 
-namespace affineengine::core {
+namespace affineflow::core {
 
 class AdamW : public Optimizer {
-  std::vector<affineengine::FlatStorage> m_;
-  std::vector<affineengine::FlatStorage> v_;
+  std::vector<affineflow::FlatStorage> m_;
+  std::vector<affineflow::FlatStorage> v_;
   int t_ = 0;
   float beta1_ = 0.9f;
   float beta2_ = 0.999f;
@@ -27,4 +27,4 @@ class AdamW : public Optimizer {
   void load_state(std::istream& is) override;
 };
 
-}  // namespace affineengine::core
+}  // namespace affineflow::core

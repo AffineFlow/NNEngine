@@ -1,6 +1,6 @@
 #include "autograd/ops/BatchNorm1dOp.hpp"
 
-namespace affineengine::autograd::ops {
+namespace affineflow::autograd::ops {
 using ArrayMap = Eigen::Map<
     Eigen::Array<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>>;
 
@@ -94,4 +94,4 @@ void BatchNorm1dOp::backward() {
     dx_arr += term.rowwise() * (std_inv.transpose() * (1.0f / batch));
   }
 }
-}  // namespace affineengine::autograd::ops
+}  // namespace affineflow::autograd::ops
