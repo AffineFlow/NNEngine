@@ -9,7 +9,6 @@ obj/
 *.obj
 build-wasm/
 web/dist/
-*.nne
 
 # --- Python ---
 __pycache__/
