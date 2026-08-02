@@ -3,10 +3,6 @@ name: Build and Deploy Wasm Demo
 on:
   push:
     branches: [ main ]
-    paths:
-      - 'web/**'
-      - 'src/**'
-      - 'include/**'
   workflow_dispatch:
 
 permissions:
@@ -20,10 +16,15 @@ concurrency:
 
 jobs:
   build:
-    name: Compile C++ to WebAssembly
+    name: Train Model, Compile Wasm, and Build React
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.14'
 
       - name: Install Latest CMake
         uses: lukka/get-cmake@latest
@@ -35,23 +36,49 @@ jobs:
         with:
           version: latest
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: '20'
+
+      - name: Install Python Package Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install numpy pybind11 scikit-build-core datasets pillow
+
+      - name: Build and Install NNEngine Locally
+        run: |
+          pip install -e .
+
+      - name: Run Training Scripts to Generate Weights (Emotion & Digits)
+        run: |
+          python scripts/train_emotion_model.py
+          python scripts/train_digit_model.py
+
       - name: Configure CMake with Emscripten
         run: |
-          emcmake cmake -B build -S web/ -DCMAKE_BUILD_TYPE=Release
+          emcmake cmake -B build-wasm -S web/ -DCMAKE_BUILD_TYPE=Release
 
       - name: Compile Wasm Binaries
         run: |
-          cmake --build build --parallel 2
+          cmake --build build-wasm --parallel 4
 
-      - name: Copy binaries to web docs directory
+      - name: Copy binaries to Vite public directory
         run: |
-          cp build/nnengine.js web/docs/
-          cp build/nnengine.wasm web/docs/
+          mkdir -p web/public
+          cp build-wasm/nnengine.js web/public/
+          cp build-wasm/nnengine.wasm web/public/
+
+      - name: Build Vite App
+        working-directory: ./web
+        run: |
+          npm install
+          npm run build
 
       - name: Upload artifact for GitHub Pages
         uses: actions/upload-pages-artifact@v5
         with:
-          path: web/docs
+          path: web/dist
 
   deploy:
     name: Deploy to GitHub Pages

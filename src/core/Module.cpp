@@ -1,5 +1,6 @@
 #include "core/Module.hpp"
 
+#include <cstdint>
 #include <fstream>
 #include <stdexcept>
 
@@ -61,18 +62,19 @@ void Module::save_weights(const std::string& filepath) {
     throw std::runtime_error("Cannot open file for writing: " + filepath);
 
   auto state_dict = this->named_parameters();
-  size_t num_params = state_dict.size();
-  out.write(reinterpret_cast<const char*>(&num_params), sizeof(size_t));
+  uint32_t num_params = static_cast<uint32_t>(state_dict.size());
+  out.write(reinterpret_cast<const char*>(&num_params), sizeof(uint32_t));
 
   for (const auto& [name, tensor] : state_dict) {
-    size_t name_len = name.size();
-    out.write(reinterpret_cast<const char*>(&name_len), sizeof(size_t));
+    uint32_t name_len = static_cast<uint32_t>(name.size());
+    out.write(reinterpret_cast<const char*>(&name_len), sizeof(uint32_t));
     out.write(name.c_str(), name_len);
 
-    size_t shape_size = tensor->shape.size();
-    out.write(reinterpret_cast<const char*>(&shape_size), sizeof(size_t));
+    uint32_t shape_size = static_cast<uint32_t>(tensor->shape.size());
+    out.write(reinterpret_cast<const char*>(&shape_size), sizeof(uint32_t));
     for (auto dim : tensor->shape) {
-      out.write(reinterpret_cast<const char*>(&dim), sizeof(Eigen::Index));
+      int32_t d = static_cast<int32_t>(dim);
+      out.write(reinterpret_cast<const char*>(&d), sizeof(int32_t));
     }
     out.write(reinterpret_cast<const char*>(tensor->data.data()),
               tensor->data.size() * sizeof(float));
@@ -85,21 +87,23 @@ void Module::load_weights(const std::string& filepath) {
     throw std::runtime_error("Cannot open file for reading: " + filepath);
 
   auto state_dict = this->named_parameters();
-  size_t num_params;
-  in.read(reinterpret_cast<char*>(&num_params), sizeof(size_t));
+  uint32_t num_params;
+  in.read(reinterpret_cast<char*>(&num_params), sizeof(uint32_t));
 
-  for (size_t i = 0; i < num_params; ++i) {
-    size_t name_len;
-    in.read(reinterpret_cast<char*>(&name_len), sizeof(size_t));
+  for (uint32_t i = 0; i < num_params; ++i) {
+    uint32_t name_len;
+    in.read(reinterpret_cast<char*>(&name_len), sizeof(uint32_t));
     std::string name(name_len, '\0');
     in.read(&name[0], name_len);
 
-    size_t shape_size;
-    in.read(reinterpret_cast<char*>(&shape_size), sizeof(size_t));
+    uint32_t shape_size;
+    in.read(reinterpret_cast<char*>(&shape_size), sizeof(uint32_t));
     std::vector<Eigen::Index> loaded_shape(shape_size);
     Eigen::Index total_size = 1;
-    for (size_t j = 0; j < shape_size; ++j) {
-      in.read(reinterpret_cast<char*>(&loaded_shape[j]), sizeof(Eigen::Index));
+    for (uint32_t j = 0; j < shape_size; ++j) {
+      int32_t dim;
+      in.read(reinterpret_cast<char*>(&dim), sizeof(int32_t));
+      loaded_shape[j] = static_cast<Eigen::Index>(dim);
       total_size *= loaded_shape[j];
     }
 

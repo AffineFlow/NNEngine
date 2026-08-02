@@ -62,9 +62,10 @@ class Tape {
         T(std::forward<Args>(args)...);
     arena_offset_ += sizeof(T);
 
+    arena_ops_.push_back(op_ptr);
+
     if (record_ops_) {
       execution_order_.push_back(op_ptr);
-      arena_ops_.push_back(op_ptr);
     }
     return op_ptr;
   }

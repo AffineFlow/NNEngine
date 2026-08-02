@@ -24,15 +24,32 @@ FetchContent_MakeAvailable(eigen)
 # Add Eigen include directories explicitly
 include_directories(${eigen_SOURCE_DIR})
 
-add_executable(nnengine wasm_wrapper.cpp)
+# Grab all the C++ source files from the main engine so they compile into WebAssembly
+file(GLOB_RECURSE ENGINE_SOURCES 
+    "../src/autograd/*.cpp" 
+    "../src/core/*.cpp" 
+    "../src/layers/*.cpp" 
+    "../src/losses/*.cpp" 
+    "../src/optimizers/*.cpp" 
+    "../src/regularizers/*.cpp"
+)
+
+add_executable(nnengine wasm_wrapper.cpp ${ENGINE_SOURCES})
 
 # Output with .js extension to generate both nnengine.js and nnengine.wasm
 set_target_properties(nnengine PROPERTIES SUFFIX ".js")
 
+target_compile_options(nnengine PRIVATE "-O3")
+
+# Production link options
 target_link_options(nnengine PRIVATE
     "--bind"
-    "-s WASM=1"
-    "-s ALLOW_MEMORY_GROWTH=1"
-    "-s EXPORTED_RUNTIME_METHODS=['ccall','cwrap']"
+    "-sWASM=1"
+    "-sALLOW_MEMORY_GROWTH=1"
+    "-sINITIAL_MEMORY=67108864"
+    "-sEXPORTED_RUNTIME_METHODS=['FS','cwrap','ccall']"
+    "-sMODULARIZE=1"
+    "-sEXPORT_ES6=1"
     "-O3"
+    "-sSTACK_SIZE=5MB"
 )
