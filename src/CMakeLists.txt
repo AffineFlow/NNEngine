@@ -57,8 +57,10 @@ foreach(ARCH IN LISTS MICROARCHS)
 
     target_include_directories(engine_core_${ARCH} PUBLIC ${CMAKE_SOURCE_DIR}/include)
 
-    # Apply hardware optimization flags (skipped for WebAssembly)
-    if(NOT EMSCRIPTEN)
+    # Apply hardware optimization flags
+    if(EMSCRIPTEN)
+        target_compile_options(engine_core_${ARCH} PUBLIC "-msimd128")
+    else()
         if(ARCH STREQUAL "avx2")
             if(MSVC)
                 target_compile_options(engine_core_${ARCH} PUBLIC "/arch:AVX2")
