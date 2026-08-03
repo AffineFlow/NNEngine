@@ -125,6 +125,11 @@ jobs:
           name: py-stubs
           path: nnengine/
 
+      - name: Patch CMake version for Pyodide compatibility
+        run: |
+          sed -i 's/cmake\.version = ">=4.4.0"/cmake.version = ">=3.24"/g' pyproject.toml
+          sed -i 's/VERSION 4.4.0/VERSION 3.24/g' CMakeLists.txt
+
       - name: Build Pyodide wheel
         uses: pypa/cibuildwheel@v4.1.1
         env:
