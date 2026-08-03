@@ -1,4 +1,4 @@
-name: Build and Publish to PyPI
+name: Build and Publish
 
 on:
   release:
@@ -6,13 +6,13 @@ on:
   workflow_dispatch:
 
 jobs:
-  # 1. Reuse the CI workflow to test and generate stubs!
+  # 1. Reuse the CI workflow to test and generate stubs
   run_ci:
     uses: ./.github/workflows/ci.yml
     permissions:
       contents: write
 
-  # 2. Build multi-OS wheels
+  # 2. Build standard multi-OS wheels
   build_wheels:
     name: Build wheels on ${{ matrix.os }}
     needs: run_ci
@@ -111,7 +111,34 @@ jobs:
           name: cibw-sdist
           path: dist/*.tar.gz
 
-  # 4. Final Publish
+  # 4. Build Pyodide WebAssembly Wheel
+  build_wasm_wheel:
+    name: Build Pyodide WebAssembly wheel
+    needs: run_ci
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Download generated stubs
+        uses: actions/download-artifact@v8
+        with:
+          name: py-stubs
+          path: nnengine/
+
+      - name: Build Pyodide wheel
+        uses: pypa/cibuildwheel@v4.1.1
+        env:
+          CIBW_PLATFORM: pyodide
+          CIBW_TEST_COMMAND: ""
+          CIBW_ENVIRONMENT: >
+            SKBUILD_CMAKE_ARGS="-DNNENGINE_BUILD_TESTS=OFF"
+        
+      - uses: actions/upload-artifact@v7
+        with:
+          name: wasm-wheel
+          path: ./wheelhouse/*.whl
+
+  # 5. Publish Standard Wheels & Source to PyPI
   publish-to-pypi:
     name: Publish Python distribution to PyPI
     needs: [build_wheels, build_sdist]
@@ -122,7 +149,7 @@ jobs:
     permissions:
       id-token: write
     steps:
-      - name: Download all the dists
+      - name: Download PyPI-compatible dists
         uses: actions/download-artifact@v8
         with:
           pattern: cibw-*
@@ -131,3 +158,23 @@ jobs:
 
       - name: Publish distribution to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
+
+  # 6. Publish ALL Wheels & Source to GitHub Releases
+  publish-to-github-releases:
+    name: Upload all distributions to GitHub Release
+    needs: [build_wheels, build_sdist, build_wasm_wheel]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v8
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Upload to GitHub Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release upload ${{ github.event.release.tag_name }} dist/* --clobber
