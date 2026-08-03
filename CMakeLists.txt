@@ -29,7 +29,7 @@ if(MSVC)
 elseif(APPLE)
     add_compile_options(-O3 -ffast-math)
     list(APPEND CMAKE_PREFIX_PATH "/opt/homebrew/opt/libomp" "/usr/local/opt/libomp")
-else()
+elseif(NOT EMSCRIPTEN)
     add_compile_options(-O3 -march=native -ffast-math)
 endif()
 
