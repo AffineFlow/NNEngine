@@ -7,7 +7,7 @@ build-backend = "scikit_build_core.build"
 
 [project]
 name = "nn-engine-core"
-version = "0.1.13"
+version = "0.1.14"
 description = "A high-performance C++ parametric optimization backend for AffineFlow"
 readme = "README.md"
 license = { text = "MIT" }
@@ -18,7 +18,7 @@ authors = [
 ]
 
 dependencies = [
-    "numpy>=2.5.1"
+    "numpy"
 ]
 keywords = ["machine-learning", "neural-networks", "autograd", "c++", "eigen"]
 classifiers = [
