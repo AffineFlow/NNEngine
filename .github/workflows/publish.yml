@@ -28,7 +28,7 @@ jobs:
         uses: actions/download-artifact@v8
         with:
           name: py-stubs
-          path: nnengine/
+          path: affineflow_nn/
 
       - name: Create ccache directory (Linux/macOS)
         if: runner.os != 'Windows'
@@ -60,25 +60,25 @@ jobs:
           CIBW_BEFORE_ALL_WINDOWS: choco install sccache -y
           CIBW_BUILD_FRONTEND: pip
           CIBW_ARCHS_MACOS: arm64
-          CIBW_TEST_COMMAND: "python -c \"import nnengine as nne; print(nne._backend)\""
+          CIBW_TEST_COMMAND: "python -c \"import affineflow_nn as nne; print(nne._backend)\""
           CMAKE_BUILD_PARALLEL_LEVEL: 2
 
           CIBW_ENVIRONMENT_LINUX: >
             PATH="/usr/lib64/ccache:/usr/lib/ccache:$PATH"
             CCACHE_DIR=/project/.ccache
             CCACHE_COMPILERCHECK=content
-            SKBUILD_CMAKE_ARGS="-DNNENGINE_BUILD_TESTS=OFF"
+            SKBUILD_CMAKE_ARGS="-DAFFINEFLOW_NN_BUILD_TESTS=OFF"
 
           CIBW_ENVIRONMENT_MACOS: >
             CCACHE_DIR=${{ github.workspace }}/.ccache
             CCACHE_COMPILERCHECK=content
-            SKBUILD_CMAKE_ARGS="-DCMAKE_OSX_ARCHITECTURES=arm64;-DNNENGINE_BUILD_TESTS=OFF"
+            SKBUILD_CMAKE_ARGS="-DCMAKE_OSX_ARCHITECTURES=arm64;-DAFFINEFLOW_NN_BUILD_TESTS=OFF"
             ARCHFLAGS="-arch arm64"
             MACOSX_DEPLOYMENT_TARGET="26.0"
 
           CIBW_ENVIRONMENT_WINDOWS: >
             SCCACHE_DIR=${{ github.workspace }}/.sccache
-            SKBUILD_CMAKE_ARGS="-DNNENGINE_BUILD_TESTS=OFF"
+            SKBUILD_CMAKE_ARGS="-DAFFINEFLOW_NN_BUILD_TESTS=OFF"
 
       - name: Fix cache permissions for Docker
         if: runner.os == 'Linux'
@@ -101,7 +101,7 @@ jobs:
         uses: actions/download-artifact@v8
         with:
           name: py-stubs
-          path: nnengine/
+          path: affineflow_nn/
 
       - name: Build sdist
         run: pipx run build --sdist
@@ -123,7 +123,7 @@ jobs:
         uses: actions/download-artifact@v8
         with:
           name: py-stubs
-          path: nnengine/
+          path: affineflow_nn/
 
       - name: Patch CMake version for Pyodide compatibility
         run: |
@@ -136,7 +136,7 @@ jobs:
           CIBW_PLATFORM: pyodide
           CIBW_TEST_COMMAND: ""
           CIBW_ENVIRONMENT: >
-            SKBUILD_CMAKE_ARGS="-DNNENGINE_BUILD_TESTS=OFF"
+            SKBUILD_CMAKE_ARGS="-DAFFINEFLOW_NN_BUILD_TESTS=OFF"
         
       - uses: actions/upload-artifact@v7
         with:
@@ -150,7 +150,7 @@ jobs:
     runs-on: ubuntu-latest
     environment:
       name: pypi
-      url: https://pypi.org/p/nn-engine-core
+      url: https://pypi.org/p/AffineFlow-NN
     permissions:
       id-token: write
     steps:

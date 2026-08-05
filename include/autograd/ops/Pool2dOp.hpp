@@ -4,7 +4,7 @@
 #include "autograd/Op.hpp"
 #include "autograd/Tensor.hpp"
 
-namespace affineflow::autograd::ops {
+namespace affineflow::nn::autograd::ops {
 
 class MaxPool2dOp : public Op {
   Tensor *x_, *out_;
@@ -32,4 +32,4 @@ class AvgPool2dOp : public Op {
   void backward() override;
 };
 
-}  // namespace affineflow::autograd::ops
+}  // namespace affineflow::nn::autograd::ops

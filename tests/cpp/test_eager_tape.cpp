@@ -4,7 +4,7 @@
 #include "autograd/Tape.hpp"
 #include "autograd/Tensor.hpp"
 
-using namespace affineflow;
+using namespace affineflow::nn;
 
 // Dummy Op to track allocations and destructions in the Arena
 static int dummy_op_destructions = 0;

@@ -1,6 +1,6 @@
 import pytest
 import numpy as np
-import nnengine as nne
+import affineflow_nn as nne
 
 def test_maxpool2d_forward_math():
     # 1 batch, 1 channel, 4x4 input
@@ -20,7 +20,7 @@ def test_maxpool2d_forward_math():
         
     out_np = np.array(out)
     
-    # NNEngine outputs flat channels per batch, so 2x2 output becomes flat length 4
+    # AffineFlow-NN outputs flat channels per batch, so 2x2 output becomes flat length 4
     expected = np.array([
         [6, 8, 14, 16]
     ], dtype=np.float32)

@@ -6,7 +6,7 @@
 
 #include "autograd/Tape.hpp"
 
-namespace affineflow::core {
+namespace affineflow::nn::core {
 
 std::shared_ptr<Layer> Module::register_module(const std::string& name,
                                                std::shared_ptr<Layer> layer) {
@@ -123,4 +123,4 @@ void Module::load_weights(const std::string& filepath) {
   }
 }
 
-}  // namespace affineflow::core
+}  // namespace affineflow::nn::core

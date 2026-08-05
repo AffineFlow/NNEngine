@@ -1,6 +1,6 @@
 import pytest
 import numpy as np
-import nnengine as nne
+import affineflow_nn as nne
 
 def test_tensor_creation_from_numpy():
     """Verify that native C++ Tensors correctly inherit NumPy arrays."""

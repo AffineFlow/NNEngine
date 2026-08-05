@@ -1,7 +1,7 @@
 #pragma once
 #include "core/Layer.hpp"
 
-namespace affineflow::layers {
+namespace affineflow::nn::layers {
 
 class MaxPool2dLayer : public core::Layer {
   int channels_, in_h_, in_w_, kernel_size_, stride_, pad_;
@@ -21,4 +21,4 @@ class AvgPool2dLayer : public core::Layer {
   autograd::Tensor* forward(autograd::Tensor* input) override;
 };
 
-}  // namespace affineflow::layers
+}  // namespace affineflow::nn::layers

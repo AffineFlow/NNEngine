@@ -1,6 +1,6 @@
 import pytest
 import numpy as np
-import nnengine as nne
+import affineflow_nn as nne
 
 def test_tensor_arithmetic():
     np_a = np.array([[1.0, 2.0], [3.0, 4.0]], dtype=np.float32)

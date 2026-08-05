@@ -7,7 +7,7 @@
 #include "autograd/Tensor.hpp"
 #include "core/Layer.hpp"
 
-namespace affineflow::layers {
+namespace affineflow::nn::layers {
 
 /**
  * @brief Applies a 2D convolution over an input signal.
@@ -29,4 +29,4 @@ class Conv2dLayer : public core::Layer {
   std::map<std::string, autograd::Tensor*> named_parameters() override;
 };
 
-}  // namespace affineflow::layers
+}  // namespace affineflow::nn::layers

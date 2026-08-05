@@ -8,7 +8,7 @@
 #include "autograd/Tensor.hpp"
 #include "core/Types.hpp"
 
-namespace affineflow::core {
+namespace affineflow::nn::core {
 
 /**
  * @brief Abstract building block for differentiable model components.
@@ -44,4 +44,4 @@ class Layer {
   void eval() { train(false); }
 };
 
-}  // namespace affineflow::core
+}  // namespace affineflow::nn::core

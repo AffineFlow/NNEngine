@@ -6,9 +6,9 @@ requires = [
 build-backend = "scikit_build_core.build"
 
 [project]
-name = "nn-engine-core"
-version = "0.1.14"
-description = "A high-performance C++ parametric optimization backend for AffineFlow"
+name = "AffineFlow-NN"
+version = "0.1.0"
+description = "A high-performance C++ neural network backend for AffineFlow"
 readme = "README.md"
 license = { text = "MIT" }
 requires-python = ">=3.12"
@@ -36,14 +36,14 @@ classifiers = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/AffineFlow/NNEngine"
-Tracker = "https://github.com/AffineFlow/NNEngine/issues"
+Homepage = "https://github.com/AffineFlow/AffineFlow-NN"
+Tracker = "https://github.com/AffineFlow/AffineFlow-NN/issues"
 
 [tool.scikit-build]
 cmake.version = ">=4.4.0"
 wheel.install-dir = "."
 build-dir = "build/{wheel_tag}"
-wheel.packages = ["nnengine"]
+wheel.packages = ["affineflow_nn"]
 
 [tool.cibuildwheel]
 skip = "*-musllinux_* *-win32 *i686 cp*t-win*"

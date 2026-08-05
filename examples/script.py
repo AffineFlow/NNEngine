@@ -19,7 +19,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 from sklearn.neural_network import MLPRegressor
 
-import nnengine as nne
+import affineflow_nn as nne
 
 # ==========================================
 # INITIALIZATION
@@ -46,7 +46,7 @@ class PyTorchDeepMLP(nn.Module):
     def forward(self, x):
         return self.net(x)
 
-class NNEngineDeepMLP(nne.Module):
+class AffineFlowNNDeepMLP(nne.Module):
     def __init__(self, in_features):
         super().__init__()
         self.fc1 = nne.DenseLayer(in_features, 128)
@@ -139,14 +139,14 @@ def run_regression_benchmark(seeds=[42, 1337, 2026]):
             best_pt_results = (pt_mse, pt_r2, pt_time)
     pt_mse, pt_r2, pt_time = best_pt_results
 
-    # --- 3. NNEngine JIT ---
-    print("Evaluating NNEngine (JIT) across seeds...")
+    # --- 3. AffineFlow-NN JIT ---
+    print("Evaluating AffineFlow-NN (JIT) across seeds...")
     best_nn_mse = float("inf")
     best_nn_results = None
 
     for seed in seeds:
         nne.set_seed(seed)
-        nn_model = NNEngineDeepMLP(X_train.shape[1])
+        nn_model = AffineFlowNNDeepMLP(X_train.shape[1])
         nn_opt = nne.Adam(learning_rate=lr)
         nn_loss = nne.MSELoss()
         nn_reg = nne.L2Regularizer(l2=weight_decay)
@@ -167,14 +167,14 @@ def run_regression_benchmark(seeds=[42, 1337, 2026]):
             best_nn_results = (nn_mse, nn_r2, nn_time)
     nn_mse, nn_r2, nn_time = best_nn_results
 
-    # --- 4. NNEngine Eager (PyTorch-like Implicit Execution) ---
-    print("Evaluating NNEngine (Eager) across seeds...")
+    # --- 4. AffineFlow-NN Eager (PyTorch-like Implicit Execution) ---
+    print("Evaluating AffineFlow-NN (Eager) across seeds...")
     best_eag_mse = float("inf")
     best_eag_results = None
 
     for seed in seeds:
         nne.set_seed(seed)
-        eag_model = NNEngineDeepMLP(X_train.shape[1])
+        eag_model = AffineFlowNNDeepMLP(X_train.shape[1])
         eag_opt = nne.Adam(learning_rate=lr)
         eag_opt.set_parameters(eag_model.parameters())
         eag_loss = nne.MSELoss()
@@ -224,8 +224,8 @@ def run_regression_benchmark(seeds=[42, 1337, 2026]):
     print("\n--- Regression Results (Best over Seeds) ---")
     print(f"Scikit-Learn | MSE: {sk_mse:.4f} | R2: {sk_r2:.4f} | Time: {sk_time:.4f}s")
     print(f"PyTorch      | MSE: {pt_mse:.4f} | R2: {pt_r2:.4f} | Time: {pt_time:.4f}s")
-    print(f"NNEngine JIT | MSE: {nn_mse:.4f} | R2: {nn_r2:.4f} | Time: {nn_time:.4f}s")
-    print(f"NNEngine Eag | MSE: {eag_mse:.4f} | R2: {eag_r2:.4f} | Time: {eag_time:.4f}s")
+    print(f"AffineFlow-NN JIT | MSE: {nn_mse:.4f} | R2: {nn_r2:.4f} | Time: {nn_time:.4f}s")
+    print(f"AffineFlow-NN Eag | MSE: {eag_mse:.4f} | R2: {eag_r2:.4f} | Time: {eag_time:.4f}s")
 
 
 # ==========================================
@@ -254,7 +254,7 @@ class PyTorchDeepCNN(nn.Module):
         x = self.flatten(x)
         return self.fc(x)
 
-class NNEngineDeepCNN(nne.Module):
+class AffineFlowNNDeepCNN(nne.Module):
     def __init__(self, in_h, in_w, num_classes):
         super().__init__()
         self.conv1 = nne.Conv2dLayer(1, 16, in_h, in_w, kernel_size=5, stride=1, pad=2)
@@ -331,14 +331,14 @@ def run_classification_benchmark(seeds=[42, 1337, 2026]):
             best_pt_results = (pt_acc, pt_time)
     pt_acc, pt_time = best_pt_results
 
-    # --- 2. NNEngine JIT ---
-    print("Evaluating NNEngine (JIT) across seeds...")
+    # --- 2. AffineFlow-NN JIT ---
+    print("Evaluating AffineFlow-NN (JIT) across seeds...")
     best_nn_acc = -1.0
     best_nn_results = None
 
     for seed in seeds:
         nne.set_seed(seed)
-        nn_model = NNEngineDeepCNN(img_h, img_w, num_classes)
+        nn_model = AffineFlowNNDeepCNN(img_h, img_w, num_classes)
         nn_opt = nne.Adam(learning_rate=lr)
         nn_loss = nne.SoftmaxCrossEntropyLoss()
         
@@ -357,14 +357,14 @@ def run_classification_benchmark(seeds=[42, 1337, 2026]):
             best_nn_results = (nn_acc, nn_time)
     nn_acc, nn_time = best_nn_results
 
-    # --- 3. NNEngine Eager (PyTorch-like Implicit Execution) ---
-    print("Evaluating NNEngine (Eager) across seeds...")
+    # --- 3. AffineFlow-NN Eager (PyTorch-like Implicit Execution) ---
+    print("Evaluating AffineFlow-NN (Eager) across seeds...")
     best_eag_acc = -1.0
     best_eag_results = None
 
     for seed in seeds:
         nne.set_seed(seed)
-        eag_model = NNEngineDeepCNN(img_h, img_w, num_classes)
+        eag_model = AffineFlowNNDeepCNN(img_h, img_w, num_classes)
         eag_opt = nne.Adam(learning_rate=lr)
         eag_opt.set_parameters(eag_model.parameters())
         eag_loss = nne.SoftmaxCrossEntropyLoss()
@@ -401,10 +401,10 @@ def run_classification_benchmark(seeds=[42, 1337, 2026]):
     # Results
     print("\n--- Classification Results (Best over Seeds) ---")
     print(f"PyTorch      | Acc: {pt_acc:.2f}% | Time: {pt_time:.4f}s")
-    print(f"NNEngine JIT | Acc: {nn_acc:.2f}% | Time: {nn_time:.4f}s")
-    print(f"NNEngine Eag | Acc: {eag_acc:.2f}% | Time: {eag_time:.4f}s")
+    print(f"AffineFlow-NN JIT | Acc: {nn_acc:.2f}% | Time: {nn_time:.4f}s")
+    print(f"AffineFlow-NN Eag | Acc: {eag_acc:.2f}% | Time: {eag_time:.4f}s")
 
 if __name__ == "__main__":
-    print("Starting Comprehensive Multi-Seed NNEngine Validation Suite...")
+    print("Starting Comprehensive Multi-Seed AffineFlow-NN Validation Suite...")
     run_regression_benchmark()
     run_classification_benchmark()

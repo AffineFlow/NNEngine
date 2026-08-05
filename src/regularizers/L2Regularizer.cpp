@@ -1,6 +1,6 @@
 #include "regularizers/L2Regularizer.hpp"
 
-namespace affineflow::core {
+namespace affineflow::nn::core {
 L2Regularizer::L2Regularizer(float l2) : l2_(l2) {}
 
 float L2Regularizer::apply(const std::vector<autograd::Tensor*>& parameters) {
@@ -22,4 +22,4 @@ float L2Regularizer::apply(const std::vector<autograd::Tensor*>& parameters) {
   }
   return penalty;
 }
-}  // namespace affineflow::core
+}  // namespace affineflow::nn::core

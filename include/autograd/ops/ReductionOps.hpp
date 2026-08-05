@@ -2,7 +2,7 @@
 #include "autograd/Op.hpp"
 #include "autograd/Tensor.hpp"
 
-namespace affineflow::autograd::ops {
+namespace affineflow::nn::autograd::ops {
 
 class SumOp : public Op {
   Tensor *a_, *out_;
@@ -22,4 +22,4 @@ class MeanOp : public Op {
   void backward() override;
 };
 
-}  // namespace affineflow::autograd::ops
+}  // namespace affineflow::nn::autograd::ops

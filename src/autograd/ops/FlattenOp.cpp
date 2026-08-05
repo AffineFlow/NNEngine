@@ -2,13 +2,13 @@
 
 #include "core/Types.hpp"
 
-namespace affineflow::autograd::ops {
+namespace affineflow::nn::autograd::ops {
 
 void FlattenOp::forward() {
   if (x_->shape.empty()) return;
 
   Eigen::Index batch = x_->shape[0];
-  Eigen::Index total = affineflow::compute_size(x_->shape);
+  Eigen::Index total = affineflow::nn::compute_size(x_->shape);
   Eigen::Index flat_dim = total / batch;
 
   if (!out_->has_shape({batch, flat_dim})) {
@@ -26,4 +26,4 @@ void FlattenOp::backward() {
   }
 }
 
-}  // namespace affineflow::autograd::ops
+}  // namespace affineflow::nn::autograd::ops

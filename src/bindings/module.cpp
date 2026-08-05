@@ -11,7 +11,7 @@ void bind_layers(py::module_& m);
 #define MACRO_STRINGIFY(x) STRINGIFY(x)
 
 PYBIND11_MODULE(BACKEND_NAME, m) {
-  m.doc() = "C++ Core Backend Engine for NNEngine";
+  m.doc() = "C++ Core Backend Engine for AffineFlow-NN";
   bind_core_utils(m);
   bind_losses_and_regs(m);
   bind_optimizers(m);

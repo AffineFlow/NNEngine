@@ -100,7 +100,7 @@ foreach(ARCH IN LISTS MICROARCHS)
 endforeach()
 
 # Convenient alias for tests linking against the baseline target
-add_library(NNEngine::Core ALIAS engine_core_generic)
+add_library(AffineFlow-NN::Core ALIAS engine_core_generic)
 
 # Delegate to the Python bindings directory
 add_subdirectory(bindings)

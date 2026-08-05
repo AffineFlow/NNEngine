@@ -36,7 +36,7 @@ def check_parses(path: Path, source: str) -> str | None:
 
 
 def main(argv: list[str]) -> int:
-    root = Path(argv[1]) if len(argv) > 1 else Path("nnengine")
+    root = Path(argv[1]) if len(argv) > 1 else Path("affineflow_nn")
     errors: list[str] = []
 
     for pyi_path in sorted(root.glob("*.pyi")):

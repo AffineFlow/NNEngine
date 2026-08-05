@@ -8,7 +8,7 @@
 #include "autograd/Op.hpp"
 #include "autograd/Tensor.hpp"
 
-namespace affineflow::autograd {
+namespace affineflow::nn::autograd {
 
 class Tape {
  private:
@@ -35,7 +35,7 @@ class Tape {
   explicit Tape(bool record_ops = true);
   ~Tape();
 
-  Tensor* alloc_tensor(const affineflow::Shape& shape,
+  Tensor* alloc_tensor(const affineflow::nn::Shape& shape,
                        bool requires_grad = true);
   Tensor* push_tensor(const Tensor& data, bool requires_grad = true);
 
@@ -94,4 +94,4 @@ class NoGradGuard {
   void exit();
 };
 
-}  // namespace affineflow::autograd
+}  // namespace affineflow::nn::autograd

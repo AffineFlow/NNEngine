@@ -4,8 +4,8 @@
 #include "autograd/Tensor.hpp"
 #include "core/Types.hpp"
 
-using namespace affineflow;
-using namespace affineflow::autograd;
+using namespace affineflow::nn;
+using namespace affineflow::nn::autograd;
 
 // ==============================================================================
 // Tensor Memory and Shape Management

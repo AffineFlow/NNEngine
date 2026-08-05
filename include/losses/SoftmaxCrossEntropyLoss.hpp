@@ -3,7 +3,7 @@
 #include "autograd/Tensor.hpp"
 #include "core/Loss.hpp"
 
-namespace affineflow::core {
+namespace affineflow::nn::core {
 
 /**
  * @brief Numerically stable softmax cross-entropy for classification.
@@ -14,4 +14,4 @@ class SoftmaxCrossEntropyLoss : public Loss {
   void backward() override;
 };
 
-}  // namespace affineflow::core
+}  // namespace affineflow::nn::core

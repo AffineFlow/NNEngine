@@ -3,7 +3,7 @@
 #include <Eigen/Core>
 #include <stdexcept>
 
-namespace affineflow::autograd::ops {
+namespace affineflow::nn::autograd::ops {
 
 using MatrixMap = Eigen::Map<
     Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>>;
@@ -32,4 +32,4 @@ void TransposeOp::backward() {
   }
 }
 
-}  // namespace affineflow::autograd::ops
+}  // namespace affineflow::nn::autograd::ops

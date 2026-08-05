@@ -1,6 +1,6 @@
 import pytest
 import numpy as np
-import nnengine as nne
+import affineflow_nn as nne
 
 def compute_numerical_gradient(forward_fn, X_np, weight_tensor, eps=1e-4):
     grad = np.zeros_like(weight_tensor.data)

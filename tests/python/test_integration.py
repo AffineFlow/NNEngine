@@ -1,6 +1,6 @@
 import pytest
 import numpy as np
-import nnengine as nne
+import affineflow_nn as nne
 
 def test_mlp_training_loop():
     nne.set_seed(42)

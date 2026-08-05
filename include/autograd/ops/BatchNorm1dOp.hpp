@@ -3,7 +3,7 @@
 #include "autograd/Op.hpp"
 #include "autograd/Tensor.hpp"
 
-namespace affineflow::autograd::ops {
+namespace affineflow::nn::autograd::ops {
 
 class BatchNorm1dOp : public Op {
   Tensor *x_, *gamma_, *beta_, *out_;
@@ -11,7 +11,7 @@ class BatchNorm1dOp : public Op {
   const bool* is_training_;
   float momentum_, eps_;
 
-  affineflow::FlatStorage x_centered_, stddev_inv_, x_hat_;
+  affineflow::nn::FlatStorage x_centered_, stddev_inv_, x_hat_;
 
  public:
   BatchNorm1dOp(Tensor* x, Tensor* gamma, Tensor* beta, Tensor* out,
@@ -22,4 +22,4 @@ class BatchNorm1dOp : public Op {
   void backward() override;
 };
 
-}  // namespace affineflow::autograd::ops
+}  // namespace affineflow::nn::autograd::ops

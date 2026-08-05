@@ -1,7 +1,7 @@
 #pragma once
 #include "core/Layer.hpp"
 
-namespace affineflow::layers {
+namespace affineflow::nn::layers {
 
 /**
  * @brief Elementwise rectified linear activation.
@@ -11,4 +11,4 @@ class ReLULayer : public core::Layer {
   autograd::Tensor* forward(autograd::Tensor* input) override;
 };
 
-}  // namespace affineflow::layers
+}  // namespace affineflow::nn::layers

@@ -1,6 +1,6 @@
 #include "autograd/ops/AddBiasOp.hpp"
 
-namespace affineflow::autograd::ops {
+namespace affineflow::nn::autograd::ops {
 using MatrixMap = Eigen::Map<
     Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>>;
 
@@ -26,4 +26,4 @@ void AddBiasOp::backward() {
     dB_mat.noalias() += dOut_mat.colwise().sum();
   }
 }
-}  // namespace affineflow::autograd::ops
+}  // namespace affineflow::nn::autograd::ops

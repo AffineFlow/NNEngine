@@ -14,7 +14,7 @@
 #include "core/Regularizer.hpp"
 #include "core/Scheduler.hpp"
 
-namespace affineflow::core {
+namespace affineflow::nn::core {
 
 class JITGraph {
  private:
@@ -47,4 +47,4 @@ class JITGraph {
   void load_checkpoint(const std::string& base_filepath);
 };
 
-}  // namespace affineflow::core
+}  // namespace affineflow::nn::core

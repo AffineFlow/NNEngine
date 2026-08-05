@@ -1,6 +1,6 @@
 #include "optimizers/SGD.hpp"
 
-namespace affineflow::core {
+namespace affineflow::nn::core {
 SGD::SGD(float learning_rate) : Optimizer(learning_rate) {}
 void SGD::step() {
   for (auto* p : parameters_) {
@@ -16,4 +16,4 @@ void SGD::step() {
     }
   }
 }
-}  // namespace affineflow::core
+}  // namespace affineflow::nn::core

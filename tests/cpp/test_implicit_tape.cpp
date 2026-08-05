@@ -4,8 +4,8 @@
 #include "autograd/Tensor.hpp"
 #include "autograd/ops/AddOp.hpp"
 
-using namespace affineflow;
-using namespace affineflow::autograd;
+using namespace affineflow::nn;
+using namespace affineflow::nn::autograd;
 
 class ImplicitTapeTest : public ::testing::Test {
  protected:

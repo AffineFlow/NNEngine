@@ -4,7 +4,7 @@ from . import _backend
 
 
 class Module(_backend.Module):
-    """Python base class for composing NNEngine layers."""
+    """Python base class for composing AffineFlow-NN layers."""
 
     def __init__(self) -> None:
         super().__init__()

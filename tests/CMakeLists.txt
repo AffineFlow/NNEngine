@@ -20,7 +20,7 @@ add_executable(nne_tests
     cpp/test_implicit_tape.cpp
 )
 
-target_link_libraries(nne_tests PRIVATE NNEngine::Core GTest::gtest_main)
+target_link_libraries(nne_tests PRIVATE AffineFlow-NN::Core GTest::gtest_main)
 
 include(GoogleTest)
 gtest_discover_tests(nne_tests)

@@ -13,6 +13,6 @@ foreach(ARCH IN LISTS MICROARCHS)
     # Automatically includes object files AND inherits compiler flags (/arch:AVX2, Eigen, etc.)
     target_link_libraries(_backend_${ARCH} PRIVATE engine_core_${ARCH})
 
-    install(TARGETS _backend_${ARCH} DESTINATION nnengine)
+    install(TARGETS _backend_${ARCH} DESTINATION affineflow_nn)
 
 endforeach()

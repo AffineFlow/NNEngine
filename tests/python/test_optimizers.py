@@ -1,6 +1,6 @@
 import pytest
 import numpy as np
-import nnengine as nne
+import affineflow_nn as nne
 
 def test_sgd_optimizer_step():
     """Verify that SGD correctly updates weights based on gradients."""

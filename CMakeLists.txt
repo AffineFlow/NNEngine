@@ -5,7 +5,7 @@ if(POLICY CMP0135)
     cmake_policy(SET CMP0135 NEW)
 endif()
 
-project(NNEngine LANGUAGES CXX)
+project(AffineFlow-NN LANGUAGES CXX)
 
 # --- Global Compiler & System Settings ---
 if(SKBUILD_FREE_THREADED)
@@ -78,8 +78,8 @@ add_subdirectory(src)
 # Enable testing at the root level, then dive into the tests folder.
 # Wheel builds (cibuildwheel) don't need the C++ test suite or the
 # GoogleTest FetchContent it pulls in, so this can be turned off there.
-option(NNENGINE_BUILD_TESTS "Build the C++ test suite (fetches GoogleTest)" ON)
-if(NNENGINE_BUILD_TESTS)
+option(AFFINEFLOW_NN_BUILD_TESTS "Build the C++ test suite (fetches GoogleTest)" ON)
+if(AFFINEFLOW_NN_BUILD_TESTS)
     enable_testing()
     add_subdirectory(tests)
 endif()

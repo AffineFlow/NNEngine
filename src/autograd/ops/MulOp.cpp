@@ -2,7 +2,7 @@
 
 #include <stdexcept>
 
-namespace affineflow::autograd::ops {
+namespace affineflow::nn::autograd::ops {
 void MulOp::forward() {
   if (a_->shape != b_->shape)
     throw std::invalid_argument("MulOp shape mismatch");
@@ -14,4 +14,4 @@ void MulOp::backward() {
   if (a_->requires_grad) a_->grad += out_->grad * b_->data;
   if (b_->requires_grad) b_->grad += out_->grad * a_->data;
 }
-}  // namespace affineflow::autograd::ops
+}  // namespace affineflow::nn::autograd::ops

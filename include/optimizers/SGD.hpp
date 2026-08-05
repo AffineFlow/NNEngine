@@ -2,7 +2,7 @@
 
 #include "core/Optimizer.hpp"
 
-namespace affineflow::core {
+namespace affineflow::nn::core {
 
 /**
  * @brief Plain stochastic gradient descent optimizer.
@@ -21,4 +21,4 @@ class SGD : public Optimizer {
   void step() override;
 };
 
-}  // namespace affineflow::core
+}  // namespace affineflow::nn::core

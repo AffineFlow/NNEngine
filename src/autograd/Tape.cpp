@@ -3,7 +3,7 @@
 #include <algorithm>
 #include <stdexcept>
 
-namespace affineflow::autograd {
+namespace affineflow::nn::autograd {
 
 Tape*& Tape::global_tape() {
   static thread_local Tape* current = nullptr;
@@ -32,7 +32,7 @@ Tape::~Tape() {
   }
 }
 
-Tensor* Tape::alloc_tensor(const affineflow::Shape& shape,
+Tensor* Tape::alloc_tensor(const affineflow::nn::Shape& shape,
                            bool requires_grad) {
   bool req_grad_actual = record_ops_ && requires_grad;
 
@@ -116,4 +116,4 @@ void NoGradGuard::exit() {
   }
 }
 
-}  // namespace affineflow::autograd
+}  // namespace affineflow::nn::autograd

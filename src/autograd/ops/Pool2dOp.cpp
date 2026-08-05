@@ -5,7 +5,7 @@
 #include <omp.h>
 #endif
 
-namespace affineflow::autograd::ops {
+namespace affineflow::nn::autograd::ops {
 
 // ==========================================
 // MaxPool2dOp Implementation
@@ -200,4 +200,4 @@ void AvgPool2dOp::backward() {
   }
 }
 
-}  // namespace affineflow::autograd::ops
+}  // namespace affineflow::nn::autograd::ops

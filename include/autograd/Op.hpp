@@ -1,6 +1,6 @@
 #pragma once
 
-namespace affineflow::autograd {
+namespace affineflow::nn::autograd {
 
 /**
  * @brief Base interface for a differentiable primitive recorded on the tape.
@@ -21,4 +21,4 @@ class Op {
   virtual void backward() = 0;
 };
 
-}  // namespace affineflow::autograd
+}  // namespace affineflow::nn::autograd

@@ -1,6 +1,6 @@
 import pytest
 import numpy as np
-import nnengine as nne
+import affineflow_nn as nne
 
 def test_implicit_forward_and_backward():
     """Verify that basic operations are recorded to the global tape automatically."""

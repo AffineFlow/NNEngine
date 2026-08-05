@@ -2,7 +2,7 @@
 
 #include <cmath>
 
-namespace affineflow::core {
+namespace affineflow::nn::core {
 
 AdamW::AdamW(float learning_rate, float weight_decay)
     : Optimizer(learning_rate), weight_decay_(weight_decay) {}
@@ -13,9 +13,9 @@ void AdamW::set_parameters(const std::vector<autograd::Tensor*>& params) {
   v_.clear();
   t_ = 0;
   for (auto* p : parameters_) {
-    m_.push_back(affineflow::FlatStorage(p->data.size()));
+    m_.push_back(affineflow::nn::FlatStorage(p->data.size()));
     m_.back().setZero();
-    v_.push_back(affineflow::FlatStorage(p->data.size()));
+    v_.push_back(affineflow::nn::FlatStorage(p->data.size()));
     v_.back().setZero();
   }
 }
@@ -85,4 +85,4 @@ void AdamW::load_state(std::istream& is) {
     is.read(reinterpret_cast<char*>(v_[i].data()), size * sizeof(float));
   }
 }
-}  // namespace affineflow::core
+}  // namespace affineflow::nn::core

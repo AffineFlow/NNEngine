@@ -12,7 +12,7 @@
 #include "regularizers/L2Regularizer.hpp"
 
 namespace py = pybind11;
-using namespace affineflow::core;
+using namespace affineflow::nn::core;
 
 void bind_losses_and_regs(py::module_& m) {
   py::class_<Loss, std::shared_ptr<Loss>>(
@@ -25,7 +25,7 @@ void bind_losses_and_regs(py::module_& m) {
       .def(
           "backward",
           [](Loss& self, bool retain_graph) {
-            auto* tape = affineflow::autograd::Tape::get_global();
+            auto* tape = affineflow::nn::autograd::Tape::get_global();
             if (!tape)
               throw std::runtime_error("No active autograd context found.");
 

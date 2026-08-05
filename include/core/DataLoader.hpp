@@ -4,7 +4,7 @@
 #include "autograd/Tensor.hpp"
 #include "core/Types.hpp"
 
-namespace affineflow::core {
+namespace affineflow::nn::core {
 
 class DataLoader {
  private:
@@ -24,4 +24,4 @@ class DataLoader {
   void next_batch(autograd::Tensor& X_batch, autograd::Tensor& y_batch);
 };
 
-}  // namespace affineflow::core
+}  // namespace affineflow::nn::core

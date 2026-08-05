@@ -1,6 +1,6 @@
 import pytest
 import numpy as np
-import nnengine as nne
+import affineflow_nn as nne
 
 def test_dynamic_graph_control_flow():
     """Verify that Python 'if' statements can dictate the computational graph dynamically."""

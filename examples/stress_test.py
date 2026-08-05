@@ -6,7 +6,7 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader as TorchDataLoader, TensorDataset
 
-import nnengine as nne
+import affineflow_nn as nne
 
 device = torch.device("cpu")
 
@@ -37,7 +37,7 @@ class PyTorchHeavyMLP(nn.Module):
     def forward(self, x):
         return self.net(x)
 
-class NNEngineHeavyMLP(nne.Module):
+class AffineFlowNNHeavyMLP(nne.Module):
     def __init__(self, in_features):
         super().__init__()
         self.fc1 = nne.DenseLayer(in_features, 512)
@@ -89,10 +89,10 @@ def run_heavy_regression(seeds=[42]):
             pt_opt.step()
     pt_time = time.perf_counter() - t0
 
-    # --- NNEngine JIT ---
-    print("Evaluating NNEngine (JIT)...")
+    # --- AffineFlow-NN JIT ---
+    print("Evaluating AffineFlow-NN (JIT)...")
     nne.set_seed(seeds[0])
-    nn_model = NNEngineHeavyMLP(n_features)
+    nn_model = AffineFlowNNHeavyMLP(n_features)
     nn_opt = nne.Adam(learning_rate=lr)
     nn_loss = nne.MSELoss()
     
@@ -103,10 +103,10 @@ def run_heavy_regression(seeds=[42]):
     trainer.fit(nne_loader, epochs=epochs, verbose=False)
     nn_time = time.perf_counter() - t0
 
-    # --- NNEngine Eager ---
-    print("Evaluating NNEngine (Eager)...")
+    # --- AffineFlow-NN Eager ---
+    print("Evaluating AffineFlow-NN (Eager)...")
     nne.set_seed(seeds[0])
-    eag_model = NNEngineHeavyMLP(n_features)
+    eag_model = AffineFlowNNHeavyMLP(n_features)
     eag_opt = nne.Adam(learning_rate=lr)
     eag_opt.set_parameters(eag_model.parameters())
     eag_loss = nne.MSELoss()
@@ -134,8 +134,8 @@ def run_heavy_regression(seeds=[42]):
 
     print("\n--- Heavy MLP Results ---")
     print(f"PyTorch      | Time: {pt_time:.4f}s")
-    print(f"NNEngine JIT | Time: {nn_time:.4f}s")
-    print(f"NNEngine Eag | Time: {eag_time:.4f}s")
+    print(f"AffineFlow-NN JIT | Time: {nn_time:.4f}s")
+    print(f"AffineFlow-NN Eag | Time: {eag_time:.4f}s")
 
 
 # ==========================================
@@ -165,7 +165,7 @@ class PyTorchHeavyCNN(nn.Module):
         x = self.flatten(x)
         return self.fc(x)
 
-class NNEngineHeavyCNN(nne.Module):
+class AffineFlowNNHeavyCNN(nne.Module):
     def __init__(self, in_channels, in_h, in_w, num_classes):
         super().__init__()
         self.conv1 = nne.Conv2dLayer(in_channels, 32, in_h, in_w, kernel_size=5, stride=2, pad=2)
@@ -221,10 +221,10 @@ def run_heavy_cnn(seeds=[42]):
             pt_opt.step()
     pt_time = time.perf_counter() - t0
 
-    # --- NNEngine JIT ---
-    print("Evaluating NNEngine (JIT)...")
+    # --- AffineFlow-NN JIT ---
+    print("Evaluating AffineFlow-NN (JIT)...")
     nne.set_seed(seeds[0])
-    nn_model = NNEngineHeavyCNN(channels, img_h, img_w, num_classes)
+    nn_model = AffineFlowNNHeavyCNN(channels, img_h, img_w, num_classes)
     nn_opt = nne.Adam(learning_rate=lr)
     nn_loss = nne.SoftmaxCrossEntropyLoss()
     
@@ -235,10 +235,10 @@ def run_heavy_cnn(seeds=[42]):
     trainer.fit(nne_loader, epochs=epochs, verbose=False)
     nn_time = time.perf_counter() - t0
 
-    # --- NNEngine Eager ---
-    print("Evaluating NNEngine (Eager)...")
+    # --- AffineFlow-NN Eager ---
+    print("Evaluating AffineFlow-NN (Eager)...")
     nne.set_seed(seeds[0])
-    eag_model = NNEngineHeavyCNN(channels, img_h, img_w, num_classes)
+    eag_model = AffineFlowNNHeavyCNN(channels, img_h, img_w, num_classes)
     eag_opt = nne.Adam(learning_rate=lr)
     eag_opt.set_parameters(eag_model.parameters())
     eag_loss = nne.SoftmaxCrossEntropyLoss()
@@ -265,10 +265,10 @@ def run_heavy_cnn(seeds=[42]):
 
     print("\n--- Heavy CNN Results ---")
     print(f"PyTorch      | Time: {pt_time:.4f}s")
-    print(f"NNEngine JIT | Time: {nn_time:.4f}s")
-    print(f"NNEngine Eag | Time: {eag_time:.4f}s")
+    print(f"AffineFlow-NN JIT | Time: {nn_time:.4f}s")
+    print(f"AffineFlow-NN Eag | Time: {eag_time:.4f}s")
 
 if __name__ == "__main__":
-    print("Starting Synthetic NNEngine Stress Tests...")
+    print("Starting Synthetic AffineFlow-NN Stress Tests...")
     run_heavy_regression()
     run_heavy_cnn()

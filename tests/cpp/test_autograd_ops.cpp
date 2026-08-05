@@ -6,8 +6,8 @@
 #include "autograd/ops/AddOp.hpp"
 #include "autograd/ops/MulOp.hpp"
 
-using namespace affineflow;
-using namespace affineflow::autograd;
+using namespace affineflow::nn;
+using namespace affineflow::nn::autograd;
 
 TEST(AutogradTest, TapeContextManagement) {
   // Implicitly initializes

@@ -4,7 +4,7 @@
 #include <cstdlib>
 #include <random>
 
-namespace affineflow::core {
+namespace affineflow::nn::core {
 
 /**
  * @brief Return the process-wide Mersenne Twister used for initialization.
@@ -33,4 +33,4 @@ inline float random_normal(float mean = 0.0f, float stddev = 1.0f) {
   return dist(rng());
 }
 
-}  // namespace affineflow::core
+}  // namespace affineflow::nn::core

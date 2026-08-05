@@ -39,31 +39,31 @@ jobs:
         
       - name: Generate Type Stubs (.pyi) and py.typed
         run: |
-          pybind11-stubgen nnengine._backend_generic -o . || true
-          pybind11-stubgen nnengine._backend_avx2 -o . || true
-          pybind11-stubgen nnengine._backend_avx512 -o . || true
+          pybind11-stubgen affineflow_nn._backend_generic -o . || true
+          pybind11-stubgen affineflow_nn._backend_avx2 -o . || true
+          pybind11-stubgen affineflow_nn._backend_avx512 -o . || true
           
-          if [ -f nnengine/_backend_avx512.pyi ]; then
-            cp nnengine/_backend_avx512.pyi nnengine/_backend.pyi
-          elif [ -f nnengine/_backend_avx2.pyi ]; then
-            cp nnengine/_backend_avx2.pyi nnengine/_backend.pyi
-          elif [ -f nnengine/_backend_generic.pyi ]; then
-            cp nnengine/_backend_generic.pyi nnengine/_backend.pyi
+          if [ -f affineflow_nn/_backend_avx512.pyi ]; then
+            cp affineflow_nn/_backend_avx512.pyi affineflow_nn/_backend.pyi
+          elif [ -f affineflow_nn/_backend_avx2.pyi ]; then
+            cp affineflow_nn/_backend_avx2.pyi affineflow_nn/_backend.pyi
+          elif [ -f affineflow_nn/_backend_generic.pyi ]; then
+            cp affineflow_nn/_backend_generic.pyi affineflow_nn/_backend.pyi
           fi
           
-          touch nnengine/py.typed
+          touch affineflow_nn/py.typed
 
       - name: Validate and harden generated stubs
-        run: python scripts/fix_stubs.py nnengine
+        run: python scripts/fix_stubs.py affineflow_nn
 
       - name: Type-check public API surface
         run: |
           pip install mypy
           mypy --strict -c "
-          import nnengine
-          reveal_type(nnengine.Module)
-          reveal_type(nnengine.Conv2dLayer)
-          reveal_type(nnengine.JITCompiler)
+          import affineflow_nn
+          reveal_type(affineflow_nn.Module)
+          reveal_type(affineflow_nn.Conv2dLayer)
+          reveal_type(affineflow_nn.JITCompiler)
           "
 
       - name: Commit and push updated stubs
@@ -71,7 +71,7 @@ jobs:
         uses: stefanzweifel/git-auto-commit-action@v7
         with:
           commit_message: "chore: auto-update pyi stubs and py.typed"
-          file_pattern: "nnengine/_backend*.pyi nnengine/__init__.pyi nnengine/py.typed"
+          file_pattern: "affineflow_nn/_backend*.pyi affineflow_nn/__init__.pyi affineflow_nn/py.typed"
           branch: main
           push_options: '--force-with-lease'
           skip_fetch: false
@@ -81,5 +81,5 @@ jobs:
         with:
           name: py-stubs
           path: |
-            nnengine/_backend*.pyi
-            nnengine/py.typed
+            affineflow_nn/_backend*.pyi
+            affineflow_nn/py.typed
