@@ -7,7 +7,7 @@ build-backend = "scikit_build_core.build"
 
 [project]
 name = "AffineFlow-NN"
-version = "0.1.0"
+version = "0.1.1"
 description = "A high-performance C++ neural network backend for AffineFlow"
 readme = "README.md"
 license = { text = "MIT" }

@@ -30,11 +30,10 @@ elseif(APPLE)
     add_compile_options(-O3 -ffast-math)
     list(APPEND CMAKE_PREFIX_PATH "/opt/homebrew/opt/libomp" "/usr/local/opt/libomp")
 elseif(EMSCRIPTEN)
-    # Aggressive optimization and Link Time Optimization for WASM
     add_compile_options(-O3 -flto)
     add_link_options(-O3 -flto)
 else()
-    add_compile_options(-O3 -march=native -ffast-math)
+    add_compile_options(-O3 -ffast-math) 
 endif()
 
 # --- Dependencies ---
